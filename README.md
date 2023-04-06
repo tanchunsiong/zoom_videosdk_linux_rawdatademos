@@ -11,6 +11,12 @@ mkdir -p ~/.zoom/logs
 cd /root
 git clone https://github.com/tanchunsiong/zoom_v-sdk_linux_bot.git
 cd zoom_v-sdk_linux_bot/
+touch config.json
+echo "{">> config.json
+echo "    \"session_name\": \"chunsiongsession\",">> config.json
+echo "    \"token\": \"xxx.yyy.zzz\",">> config.json
+echo "    \"session_psw\": \"12345678\"">> config.json
+echo "}">> config.json
 cmake -B build
 cd build/
 make
