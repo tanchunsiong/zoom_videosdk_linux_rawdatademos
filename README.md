@@ -24,6 +24,8 @@ you will also need to add the SDK files (.so files) to /lib/zoom_video_sdk
 extract /lib/ffmpeg.tar.gz to /lib/ffmpeg
 extract /lib/qt_libs.tar.gz to /zoom_video_sdk/qt_libs
 
+make a copy of /lib/zoom_video_sdk/libvideosdk.so to /lib/zoom_video_sdk/libvideosdk.so.1
+
 ## Generate Your JWT
 You much have an account [subscribed](https://marketplace.zoom.us/docs/sdk/video/developer-accounts/) Zoom Video SDK. 
 
