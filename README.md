@@ -19,7 +19,7 @@ echo "    \"session_psw\": \"12345678\"">> config.json
 echo "}">> config.json
 
 #copy files from zoom video SDK to /zoom_video_sdk/
-
+#copy header files from zoom video SDK to /include/zoom_video_sdk and /include/zoom_video_sdk/helpers
 cmake -B build
 cd build/
 make
