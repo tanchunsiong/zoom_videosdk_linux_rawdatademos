@@ -19,6 +19,18 @@ make
 ## Adding files
 
 you will need to add `config.json` in your root directory
+its content will look something like this
+```
+
+{
+    "session_name": "chunsiongsession",
+    "token": "xxx.yyy.zzz",
+    "session_psw": "12345678"
+}
+
+
+```
+
 you will also need to add the SDK files (.so files) to /lib/zoom_video_sdk
 
 extract /lib/ffmpeg.tar.gz to /lib/ffmpeg
