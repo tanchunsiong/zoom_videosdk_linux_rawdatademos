@@ -17,6 +17,9 @@ echo "    \"session_name\": \"chunsiongsession\",">> config.json
 echo "    \"token\": \"xxx.yyy.zzz\",">> config.json
 echo "    \"session_psw\": \"12345678\"">> config.json
 echo "}">> config.json
+
+#copy files from zoom video SDK to /zoom_video_sdk/
+
 cmake -B build
 cd build/
 make
