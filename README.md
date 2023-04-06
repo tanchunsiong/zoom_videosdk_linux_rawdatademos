@@ -7,15 +7,7 @@ The code demostrate how to use Zoom Video SDK's Raw Data feature, and how to use
 sudo apt update
 sudo apt install -y build-essential gcc cmake
 sudo apt install -y libglib2.0-dev liblzma-dev libxcb-image0 libxcb-keysyms1 libxcb-xfixes0 libxcb-xkb1 libxcb-shape0 libxcb-shm0 libxcb-randr0 libxcb-xtest0 libgbm1 libxtst6 libgl1 libnss3  libasound2 libpulse0
-#might need to add these
 
-sudo apt install -y	libqt5quick5 
-sudo apt install -y	libqt5qml5
-sudo apt install -y	libqt5network5
-sudo apt install -y	libqt5gui5
-sudo apt install -y	libqt5core5a
-
-sudo apt install -y g++-11
 
 mkdir -p ~/.zoom/logs
 cd /root
@@ -55,6 +47,9 @@ extract /lib/qt_libs.tar.gz to /zoom_video_sdk/qt_libs
 
 make a copy of /lib/zoom_video_sdk/libvideosdk.so to /lib/zoom_video_sdk/libvideosdk.so.1
 
+you will also need to add qt_libs into  /lib/zoom_video_sdk/qt_libs
+this is typically double packaged into a tar and gz
+
 ## Generate Your JWT
 You much have an account [subscribed](https://marketplace.zoom.us/docs/sdk/video/developer-accounts/) Zoom Video SDK. 
 
@@ -70,4 +65,5 @@ Run the app from bin folder:
 ./zoom_v-sdk_linux_bot
 ```
 
-
+## error messages
+ALSA error messages appears to be from the SDK, this might be caused by missing speaker / microphone
