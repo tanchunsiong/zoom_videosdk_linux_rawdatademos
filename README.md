@@ -7,6 +7,16 @@ The code demostrate how to use Zoom Video SDK's Raw Data feature, and how to use
 sudo apt update
 sudo apt install -y build-essential gcc cmake
 sudo apt install -y libglib2.0-dev liblzma-dev libxcb-image0 libxcb-keysyms1 libxcb-xfixes0 libxcb-xkb1 libxcb-shape0 libxcb-shm0 libxcb-randr0 libxcb-xtest0 libgbm1 libxtst6 libgl1 libnss3  libasound2 libpulse0
+#might need to add these
+
+sudo apt install -y	libqt5quick5 
+sudo apt install -y	libqt5qml5
+sudo apt install -y	libqt5network5
+sudo apt install -y	libqt5gui5
+sudo apt install -y	libqt5core5a
+
+sudo apt install -y g++-11
+
 mkdir -p ~/.zoom/logs
 cd /root
 git clone https://github.com/tanchunsiong/zoom_v-sdk_linux_bot.git
@@ -17,9 +27,6 @@ echo "    \"session_name\": \"chunsiongsession\",">> config.json
 echo "    \"token\": \"xxx.yyy.zzz\",">> config.json
 echo "    \"session_psw\": \"12345678\"">> config.json
 echo "}">> config.json
-
-#copy files from zoom video SDK to /zoom_video_sdk/
-#copy header files from zoom video SDK to /include/zoom_video_sdk and /include/zoom_video_sdk/helpers
 cmake -B build
 cd build/
 make
