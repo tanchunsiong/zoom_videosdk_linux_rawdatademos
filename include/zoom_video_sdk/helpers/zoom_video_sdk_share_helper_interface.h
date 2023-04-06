@@ -33,6 +33,39 @@ struct ZoomVideoSDKShareOption
     }
 };
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief Share raw data sender interface.
+///
+class IZoomVideoSDKShareSender
+{
+public:
+	virtual ~IZoomVideoSDKShareSender() {}
+
+	/// \brief Send one frame data.
+    /// \param frameBuffer FrameBuffer YUVI420 buffer.
+    /// \param width Frame width.
+    /// \param height Frame height.
+    /// \param frameLength Buffer length.
+    /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
+	virtual ZoomVideoSDKErrors sendShareFrame(char* frameBuffer, int width, int height, int frameLength) = 0;
+};
+
+/// \brief Share source sink interface.
+///
+class IZoomVideoSDKShareSource
+{
+public:
+	virtual ~IZoomVideoSDKShareSource() {}
+
+    /// \brief Callback for share source can start send raw data.
+    /// \param sender See \link IZoomVideoSDKShareSender \endlink.
+	virtual void onShareSendStarted(IZoomVideoSDKShareSender* pSender) = 0; 
+
+    /// \brief Callback for share source stop send raw data.
+	virtual void onShareSendStopped() = 0; 
+};
+
 /// \brief Share helper interface.
 ///
 class IZoomVideoSDKRawDataPipeDelegate;
@@ -40,16 +73,16 @@ class IZoomVideoSDKShareHelper
 {
 public:
 
-	/// \brief Share a window, if virtual speaker is enabled, don't support share audio.
-    /// \param handle, the window handle that will to be share.
-    /// \param option, see \link ZoomVideoSDKShareOption \endlink.
+	/// \brief Share a selected window, if virtual speaker is enabled, don't support share audio.
+    /// \param handle The window handle that will to be share.
+    /// \param option See \link ZoomVideoSDKShareOption \endlink.
 	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
 	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors startShareView(void* handle, ZoomVideoSDKShareOption option = {false, false}) = 0;
 	
-	/// \brief Share a screen, if virtual speaker is enabled, don't support share audio.
-    /// \param monitorID, the screen name that will to be share.
-    /// \param option, see \link ZoomVideoSDKShareOption \endlink.
+	/// \brief Share a selected screen, if virtual speaker is enabled, don't support share audio.
+    /// \param monitorID The screen name that will to be share.
+    /// \param option See \link ZoomVideoSDKShareOption \endlink.
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
     ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors startShareScreen(const zchar_t* monitorID, ZoomVideoSDKShareOption option = { false, false }) = 0;
@@ -64,29 +97,30 @@ public:
     ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors stopShare() = 0;
     
-	/// \brief Determine if myself is sharing.
-	/// \return True if myself is sharing. Otherwise returns false.
+	/// \brief Determine whether the current user is sharing.
+	/// \return True indicates the current user is sharing. Otherwise returns false.
     virtual bool isSharingOut() = 0;
     
-	/// \brief Determine if myself is sharing screen.
-    /// \return True if myself is sharing screen. Otherwise returns false.
+	/// \brief Determine whether the current user is sharing the screen.
+    /// \return True indicates the current user is sharing the screen, otherwise false.
     virtual bool isScreenSharingOut() = 0;
 
 	/// \brief Determine if other user is sharing.
-    /// \return True if other user is sharing screen. Otherwise returns false.
+    /// \return True indicates another user is sharing, otherwise false.
     virtual bool isOtherSharing() = 0;
     
-	/// \brief Lock current share.(only host call).
+	/// \brief Lock sharing the view or screen. Only the host can call this method.
+    /// \param lock True to lock sharing
 	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
 	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors lockShare(bool lock) = 0;
     
-	/// \brief Determine if share is locked.
-    /// \return True if share is locked. Otherwise returns false.
+	/// \brief Determine whether sharing is locked.
+    /// \return True indicates that sharing is locked, otherwise false.
     virtual bool isShareLocked() = 0;
 
 	/// \brief Enable or disable the computer sound when sharing, if virtual speaker is enabled, don't support share audio.
-    /// \param  enable, TRUE indicates to enable. FALSE disable.
+    /// \param enable True indicates to enable. False disable.
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
     ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
 	virtual ZoomVideoSDKErrors enableShareDeviceAudio(bool enable) = 0;
@@ -96,7 +130,7 @@ public:
     virtual bool isShareDeviceAudioEnabled() = 0;
 
 	/// \brief Enable or disable the optimization of frame rate, you can enable it when there is video in shared content.
-    /// \param  enable, TRUE indicates to enable. FALSE disable.
+    /// \param enable True indicates to enable. False disable.
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
     ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
 	virtual ZoomVideoSDKErrors enableOptimizeForSharedVideo(bool enable) = 0;
@@ -106,13 +140,13 @@ public:
     virtual bool isOptimizeForSharedVideoEnabled() = 0;
 
     /// \brief Start sharing a camera feed specified by the cameraID as the second camera.
-    /// \param cameraID: The camera ID.Warning: This must be a different camera than the one sending your primary video.
+    /// \param cameraID The camera ID.Warning: This must be a different camera than the one sending your primary video.
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
     ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors startShare2ndCamera(const zchar_t* cameraID) = 0;
 
     /// \brief Subscribe to the raw data stream of the camera that is shared as the second camera.
-    /// \param data_handler: Data handler object.
+    /// \param data_handler Data handler object.
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
     ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors subscribeMyShareCamera(IZoomVideoSDKRawDataPipeDelegate* data_handler) = 0;
@@ -121,6 +155,12 @@ public:
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
     ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors unSubscribeMyShareCamera() = 0;
+
+	/// \brief Share an external source.
+	/// \param external share source, \link IZoomVideoSDKShareSource \endlink.
+	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
+    virtual ZoomVideoSDKErrors startSharingExternalSource(IZoomVideoSDKShareSource* pSource) = 0;
 };
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif

@@ -204,9 +204,12 @@ public:
     /// \brief Triggered when call Out status changed.
     virtual void onInviteByPhoneStatus(PhoneStatus status, PhoneFailedReason reason){};
 
-    /// \brief Callback for when the cloud recording status has changed (e.g. paused, stopped, resumed).
-    /// \param status cloud recording status defined in \link RecordingStatus \endlink.
-    virtual void onCloudRecordingStatus(RecordingStatus status){};
+
+
+	/// \brief Invoked when cloud recording status has paused, stopped, resumed, or otherwise changed.
+	/// \param status Cloud recording status defined in \link RecordingStatus \endlink.
+	/// \param pHandler When the cloud recording starts, this object is used to let the user choose whether to accept or not.
+	virtual void onCloudRecordingStatus(RecordingStatus status, IZoomVideoSDKRecordingConsentHandler* pHandler) {};
 
     /// \brief Triggered when host ask you to unmute.
     virtual void onHostAskUnmute(){};
@@ -223,18 +226,56 @@ public:
 
     virtual void onSelectedAudioDeviceChanged() {}
 
-    virtual void onLiveTranscriptionStatus(ZoomVideoSDKLiveTranscriptionStatus status) {}
 
-    /// \brief live transcription message received callback.
-    /// \param ltMsg: an object pointer to the live transcription message content.
-    /// \param pUser the pointer to the user who speak the message, see \link IZoomVideoSDKUser \endlink.
-    /// \param type: the live transcription operation type. For more details, see \link ZoomVideoSDKLiveTranscriptionOperationType \endlink.
-    virtual void onLiveTranscriptionMsgReceived(const zchar_t *ltMsg, IZoomVideoSDKUser *pUser, ZoomVideoSDKLiveTranscriptionOperationType type) {}
 
-    /// \brief The translation message error callback.
-    /// \param speakingLanguage: an object of the spoken message language.
-    /// \param transcriptLanguageId: an object of the message language you want to translate.
-    virtual void onLiveTranscriptionMsgError(ILiveTranscriptionLanguage *spokenLanguage, ILiveTranscriptionLanguage *transcriptLanguage) {}
+    /// \brief Invoked when a user consents to individual recording.
+	/// \param pUser The pointer to user object.
+	virtual void onUserRecordingConsent(IZoomVideoSDKUser* pUser) {};
+
+    	/// \brief Invoked when live transcription status changes.
+	/// \param status The live transcription status. For more details, see \link ZoomVideoSDKLiveTranscriptionStatus \endlink.
+	virtual void onLiveTranscriptionStatus(ZoomVideoSDKLiveTranscriptionStatus status) {};
+	/// \brief Invoked when a live transcription message is received.
+	/// \param ltMsg The live transcription message content. 
+	/// \param pUser The user who speak the message, see \link IZoomVideoSDKUser \endlink. 
+	/// \param type The live transcription operation type. For more details, see \link ZoomVideoSDKLiveTranscriptionOperationType \endlink.
+	/// \deprecated This interface will be marked as deprecated, then it will be instead by onLiveTranscriptionMsgInfoReceived, please stop using it.
+	virtual void onLiveTranscriptionMsgReceived(const zchar_t* ltMsg, IZoomVideoSDKUser* pUser, ZoomVideoSDKLiveTranscriptionOperationType type) {};
+
+	/// \brief Invoked when a live transcription message is received.	
+	/// \param messageInfo The live transcription message, see \link ILiveTranscriptionMessageInfo \endlink. 	
+	virtual void onLiveTranscriptionMsgInfoReceived(ILiveTranscriptionMessageInfo* messageInfo) {};
+
+
+	/// \brief Invoked when a live translation error occurs.
+	/// \param speakingLanguage The spoken message language. 
+	/// \param transcriptLanguageId The message language you want to translate.
+	virtual void onLiveTranscriptionMsgError(ILiveTranscriptionLanguage* spokenLanguage, ILiveTranscriptionLanguage* transcriptLanguage) {};
+
+
+	/// \brief Invoked when a user deletes a chat message.
+	/// \param pChatHelper Chat helper utility, see \link IZoomVideoSDKChatHelper \endlink.
+	/// \param MsgID The deleted message's ID.
+	/// \param deleteBy Indicates by whom the message was deleted.
+	virtual void onChatMsgDeleteNotification(IZoomVideoSDKChatHelper* pChatHelper, const zchar_t* msgID, ZoomVideoSDKChatMessageDeleteType deleteBy){};
+
+
+	/// \brief Notification callback of completing the proxy detection.
+	virtual void onProxyDetectComplete() {};
+	/// \brief The callback will be triggered if the proxy requests to input the username and password.
+	/// \remarks Use the handler to configure the related information. For more details, see \link IZoomVideoSDKProxySettingHandler \endlink. 
+	///The handler will be destroyed once the function calls end.
+	virtual void onProxySettingNotification(IZoomVideoSDKProxySettingHandler* handler){};
+
+	/// \brief The callback will be triggered when the SSL verified fail.
+	/// \remarks Use the handler to check the SSL related information. For more details, see \link IZoomVideoSDKSSLCertificateInfo \endlink.
+	///The handler will be destroyed once the function calls end.
+	virtual void onSSLCertVerifiedFailNotification(IZoomVideoSDKSSLCertificateInfo* info) {};
+
+	/// \brief Callback event of the user's video network quality changes.
+	/// \param status video network quality. For more details, see \link ZoomVideoSDKNetworkStatus \endlink enum.
+	/// \param pUser The pointer to a user object, see \link IZoomVideoSDKUser \endlink. 	
+	virtual void onUserVideoNetworkStatusChanged(ZoomVideoSDKNetworkStatus status, IZoomVideoSDKUser* pUser){};
 };
 
 void joinVideoSDKSession(std::string &session_name, std::string &session_psw, std::string &session_token)

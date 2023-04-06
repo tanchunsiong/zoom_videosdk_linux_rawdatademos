@@ -59,6 +59,7 @@ typedef enum
 	ZoomVideoSDKErrors_Session_Password_Wrong,
 	ZoomVideoSDKErrors_Session_Remote_DB_Error,
 	ZoomVideoSDKErrors_Session_Invalid_Param,
+	ZoomVideoSDKErrors_Session_Client_Incompatible,
 	ZoomVideoSDKErrors_Session_Audio_Error = 3000,
 	ZoomVideoSDKErrors_Session_Audio_No_Microphone,
 	ZoomVideoSDKErrors_Session_Audio_No_Speaker,
@@ -98,6 +99,7 @@ typedef enum
 	ZoomVideoSDKErrors_Dont_Support_Multi_Stream_Video_User,
 	ZoomVideoSDKErrors_Fail_Assign_User_Privilege,
 	ZoomVideoSDKErrors_No_Recording_In_Process,
+	ZoomVideoSDKErrors_Set_Virtual_Background_Fail
 
 }ZoomVideoSDKErrors;
 
@@ -152,14 +154,14 @@ typedef enum
 */
 enum RecordingStatus
 {
-	/// \brief The recording has started or resumed.
+	/// \brief The recording has successfully started or successfully resumed.
 	Recording_Start,
 	/// \brief The recording has stopped.
 	Recording_Stop,
-	/// \brief Recording is unsuccessful due to not having enough storage space.
+	/// \brief Recording is unsuccessful due to insufficient storage space.
 	///	Please try to:
-	///		Free up space
-	///		Purchase more space
+	///		Free up storage space
+	///		Purchase additional storage space
 	Recording_DiskFull,
 	/// \brief The recording has paused.
 	Recording_Pause,
@@ -177,7 +179,7 @@ typedef	enum
 */
 struct ZoomVideoSDKExtendParams
 {
-	const zchar_t* speakerTestFilePath;  //Only support mp3 format,The size cannot exceed 1M
+	const zchar_t* speakerTestFilePath;  ///<Only support mp3 format,The size cannot exceed 1M
 
 	ZoomVideoSDKExtendParams()
 	{
@@ -230,11 +232,13 @@ struct ZoomVideoSDKAudioOption
 {
     bool connect; /// \brief Connect local audio or not.
     bool mute;    /// \brief Mute audio or not.
+	bool isMyVoiceInMix; /// \brief Is my voice in the mixed audio raw data?
 
 	ZoomVideoSDKAudioOption()
 	{
 		connect = true;
 		mute = false;
+		isMyVoiceInMix = true;
 	}
 };
 
