@@ -3,7 +3,7 @@
 
 using namespace ZOOMVIDEOSDK;
 
-
+//needed for audio, applies to this entire .cpp file
 
 void VirtualAudioSpeaker::SendRawAudio(char* data, unsigned int data_length, int sample_rate)
 {
