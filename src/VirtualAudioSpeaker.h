@@ -3,6 +3,8 @@
 #include "helpers/zoom_video_sdk_audio_send_rawdata_interface.h"
 using namespace ZOOMVIDEOSDK;
 
+//needed for audio, applies to this entire .h file
+
 class VirtualAudioSpeaker :
   public IZoomVideoSDKVirtualAudioMic , public IZoomVideoSDKVirtualAudioSpeaker
 {

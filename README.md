@@ -67,3 +67,16 @@ Run the app from bin folder:
 
 ## error messages
 ALSA error messages appears to be from the SDK, this might be caused by missing speaker / microphone
+
+
+## walkthru on audio
+
+for raw audio access to work, here are some high level requirements
+//needed for audio 
+the above comment in code will help you to find the code segments which are needed
+
+- IZoomVideoSDKVirtualAudioSpeaker
+  - Set this as virtual speake r and virtual mic in session_context before joining
+  - getAudioHelper() when in session, and call subscribe to start callback. 
+    - If you do not call subscribe, there will be no callback for onmixedaudio and ononewayaudio. 
+    - If you do not set the virtual speaker and virtual mic in session_context, there will be no callback for onmixedaudio and ononewayaudio.
