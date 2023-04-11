@@ -21,7 +21,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include/ffmpeg)
 link_directories(${CMAKE_SOURCE_DIR}/lib/zoom_video_sdk)
 link_directories(${CMAKE_SOURCE_DIR}/lib/ffmpeg)
 
-add_executable(zoom_v-sdk_linux_bot ${CMAKE_SOURCE_DIR}/src/raw_data_ffmpeg_encoder.cpp ${CMAKE_SOURCE_DIR}/src/VirtualAudioSpeaker.cpp ${CMAKE_SOURCE_DIR}/src/zoom_v-sdk_linux_bot.cpp )
+add_executable(zoom_v-sdk_linux_bot ${CMAKE_SOURCE_DIR}/src/raw_data_ffmpeg_encoder.cpp ${CMAKE_SOURCE_DIR}/src/VirtualAudioSpeaker.cpp ${CMAKE_SOURCE_DIR}/src/VirtualShareSource.cpp ${CMAKE_SOURCE_DIR}/src/zoom_v-sdk_linux_bot.cpp )
 
 target_link_libraries(zoom_v-sdk_linux_bot PkgConfig::deps)
 target_link_libraries(zoom_v-sdk_linux_bot videosdk)

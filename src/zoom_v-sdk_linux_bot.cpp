@@ -21,6 +21,10 @@
     #include "VirtualAudioSpeaker.h"
     #include "helpers/zoom_video_sdk_audio_send_rawdata_interface.h"
 
+    //needed for share screen
+    #include "VirtualShareSource.h"
+    #include "helpers/zoom_video_sdk_share_helper_interface.h"
+
     using Json = nlohmann::json;
     USING_ZOOM_VIDEO_SDK_NAMESPACE
     IZoomVideoSDK *video_sdk_obj;
@@ -64,10 +68,21 @@
  
 
         //needed for audio
-           ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
-            printf("subscribe status is %d\n", err);
+        // ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
+        // printf("subscribe status is %d\n", err);
        
-            
+
+       //needed for share source
+       VirtualShareSource* vss = new VirtualShareSource();
+       video_sdk_obj->getShareHelper()->isOtherSharing();
+      
+       ZoomVideoSDKErrors err= video_sdk_obj->getShareHelper()->startSharingExternalSource(vss);    
+            if (err==ZoomVideoSDKErrors::ZoomVideoSDKErrors_Success){
+            }
+            else{
+
+                   printf("Error setting external source %s\n", err);
+            }            
         };
 
         /// \brief Triggered when session leaveSession
@@ -145,8 +160,7 @@
 
    
         virtual void onUserActiveAudioChanged(IZoomVideoSDKAudioHelper *pAudioHelper,
-                                            IVideoSDKVector<IZoomVideoSDKUser *> *list){
- };
+                                            IVideoSDKVector<IZoomVideoSDKUser *> *list){};
 
      
         virtual void onSessionNeedPassword(IZoomVideoSDKPasswordHandler *handler){};
