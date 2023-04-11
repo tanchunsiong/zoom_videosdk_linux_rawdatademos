@@ -7,12 +7,12 @@ using namespace ZOOMVIDEOSDK;
 
    void VirtualShareSource::onShareSendStarted(IZoomVideoSDKShareSender* pSender) {
    
-   printf("onShareSendStarted() invoked");
+   printf("onShareSendStarted() invoked \n");
 
    };
    void VirtualShareSource::onShareSendStopped() {
 
-        printf("onShareSendStopped() invoked");
+        printf("onShareSendStopped() invoked \n");
    };
 
 

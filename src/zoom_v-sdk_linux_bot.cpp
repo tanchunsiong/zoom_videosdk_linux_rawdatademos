@@ -68,16 +68,16 @@
  
 
         //needed for audio
-        // ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
-        // printf("subscribe status is %d\n", err);
+         ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
+         printf("subscribe status is %d\n", err);
        
 
        //needed for share source
        VirtualShareSource* vss = new VirtualShareSource();
-       video_sdk_obj->getShareHelper()->isOtherSharing();
-      
-       ZoomVideoSDKErrors err= video_sdk_obj->getShareHelper()->startSharingExternalSource(vss);    
-            if (err==ZoomVideoSDKErrors::ZoomVideoSDKErrors_Success){
+       ZoomVideoSDKErrors err2= video_sdk_obj->getShareHelper()->startSharingExternalSource(vss);    
+            if (err2==ZoomVideoSDKErrors::ZoomVideoSDKErrors_Success){
+
+
             }
             else{
 
@@ -206,7 +206,11 @@
             IZoomVideoSDKCameraControlRequestHandler *pCameraControlRequestHandler){};
 
 
-        virtual void onCommandReceived(IZoomVideoSDKUser *sender, const zchar_t *strCmd){}
+        virtual void onCommandReceived(IZoomVideoSDKUser *sender, const zchar_t *strCmd){
+            
+  printf("onCommandReceived() Message: %s\n", strCmd);    
+
+        }
         virtual void onCommandChannelConnectResult(bool isSuccess){};
         virtual void onInviteByPhoneStatus(PhoneStatus status, PhoneFailedReason reason){};
         virtual void onCloudRecordingStatus(RecordingStatus status, IZoomVideoSDKRecordingConsentHandler* pHandler) {};
