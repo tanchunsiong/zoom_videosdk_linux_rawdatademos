@@ -1,16 +1,16 @@
-#include "VirtualShareSource.h"
+#include "ZoomVideoSDKShareSource.h"
 #include "helpers/zoom_video_sdk_user_helper_interface.h"
 
 using namespace ZOOMVIDEOSDK;
 
 
 
-   void VirtualShareSource::onShareSendStarted(IZoomVideoSDKShareSender* pSender) {
+   void ZoomVideoSDKShareSource::onShareSendStarted(IZoomVideoSDKShareSender* pSender) {
    
    printf("onShareSendStarted() invoked \n");
 
    };
-   void VirtualShareSource::onShareSendStopped() {
+   void ZoomVideoSDKShareSource::onShareSendStopped() {
 
         printf("onShareSendStopped() invoked \n");
    };

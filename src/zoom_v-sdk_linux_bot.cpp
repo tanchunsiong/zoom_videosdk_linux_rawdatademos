@@ -18,11 +18,12 @@
     #include "raw_data_ffmpeg_encoder.h"
 
     //needed for audio
-    #include "VirtualAudioSpeaker.h"
+    #include "ZoomVideoSDKVirtualAudioMic.h"
+    #include "ZoomVideoSDKVirtualAudioSpeaker.h"
     #include "helpers/zoom_video_sdk_audio_send_rawdata_interface.h"
 
     //needed for share screen
-    #include "VirtualShareSource.h"
+    #include "ZoomVideoSDKShareSource.h"
     #include "helpers/zoom_video_sdk_share_helper_interface.h"
 
     using Json = nlohmann::json;
@@ -73,7 +74,7 @@
        
 
        //needed for share source
-       VirtualShareSource* vss = new VirtualShareSource();
+       ZoomVideoSDKShareSource* vss = new ZoomVideoSDKShareSource();
        ZoomVideoSDKErrors err2= video_sdk_obj->getShareHelper()->startSharingExternalSource(vss);    
             if (err2==ZoomVideoSDKErrors::ZoomVideoSDKErrors_Success){
 
@@ -255,6 +256,7 @@
 
     void joinVideoSDKSession(std::string &session_name, std::string &session_psw, std::string &session_token)
     {
+        ZoomVideoSDKRawDataMemoryMode heap = ZoomVideoSDKRawDataMemoryMode::ZoomVideoSDKRawDataMemoryModeHeap;
         video_sdk_obj = CreateZoomVideoSDKObj();
         ZoomVideoSDKInitParams init_params;
         init_params.domain = "https://go.zoom.us";
@@ -283,10 +285,11 @@
         session_context.audioOption.mute = true;
 
          //needed for audio (dreamtcs test if needed for non virtual)
-        VirtualAudioSpeaker* vas  =new VirtualAudioSpeaker();
-        session_context.virtualAudioMic=vas;
-        session_context.virtualAudioSpeaker =vas;
-
+        ZoomVideoSDKVirtualAudioSpeaker* vSpeaker  =new ZoomVideoSDKVirtualAudioSpeaker();
+         ZoomVideoSDKVirtualAudioMic* vMic  =new ZoomVideoSDKVirtualAudioMic();
+        session_context.virtualAudioMic=vMic;
+        session_context.virtualAudioSpeaker =vSpeaker;
+        
         IZoomVideoSDKSession *session = NULL;
         if (video_sdk_obj)
             session = video_sdk_obj->joinSession(session_context);

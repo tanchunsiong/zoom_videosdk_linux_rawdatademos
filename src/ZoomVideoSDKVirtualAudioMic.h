@@ -5,9 +5,9 @@ using namespace ZOOMVIDEOSDK;
 
 //needed for audio, applies to this entire .h file
 
-class VirtualAudioSpeaker :
-  public IZoomVideoSDKVirtualAudioMic , public IZoomVideoSDKVirtualAudioSpeaker
-{
+class ZoomVideoSDKVirtualAudioMic :
+  public IZoomVideoSDKVirtualAudioMic 
+  {
 public: 
 
 
@@ -20,11 +20,6 @@ public:
     virtual void onMicStopSend();
     virtual void onMicUninitialized();
 
-    //IZoomVideoSDKVirtualAudioSpeaker
-    virtual void onVirtualSpeakerMixedAudioReceived(AudioRawData* data_);
-    virtual void onVirtualSpeakerOneWayAudioReceived(AudioRawData* data_, ZOOM_VIDEO_SDK_NAMESPACE::IZoomVideoSDKUser* pUser);
-    virtual void onVirtualSpeakerSharedAudioReceived(AudioRawData* data_);
-    
 
 protected:
     ZOOM_VIDEO_SDK_NAMESPACE::IZoomVideoSDKAudioSender* virtual_audio_sender_;

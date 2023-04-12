@@ -5,7 +5,7 @@ using namespace ZOOMVIDEOSDK;
 
 //needed for audio, applies to this entire .h file
 
-class VirtualShareSource :
+class ZoomVideoSDKShareSource :
   public IZoomVideoSDKShareSource 
 {
 public: 
