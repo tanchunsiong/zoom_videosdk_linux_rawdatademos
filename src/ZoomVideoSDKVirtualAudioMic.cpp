@@ -18,12 +18,14 @@ void ZoomVideoSDKVirtualAudioMic::SendRawAudio(char* data, unsigned int data_len
 
 void ZoomVideoSDKVirtualAudioMic::onMicInitialize(IZoomVideoSDKAudioSender* rawdata_sender)
 {
+        printf("onMicInitialize\n");
     // Once the sender has been recieved from this callback, then Send can be called
     virtual_audio_sender_ = rawdata_sender;
 }
 
 void ZoomVideoSDKVirtualAudioMic::onMicStartSend()
 {
+        printf("onMicStartSend\n");
     if (!virtual_audio_sender_)
     {
         return;

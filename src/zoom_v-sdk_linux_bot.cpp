@@ -26,6 +26,10 @@
     #include "ZoomVideoSDKShareSource.h"
     #include "helpers/zoom_video_sdk_share_helper_interface.h"
 
+//needed for get raw video
+    #include "ZoomVideoSDKVideoSource.h"
+      #include "helpers/zoom_video_sdk_video_helper_interface.h"
+
     using Json = nlohmann::json;
     USING_ZOOM_VIDEO_SDK_NAMESPACE
     IZoomVideoSDK *video_sdk_obj;
@@ -58,19 +62,19 @@
         //needed for audio
         IZoomVideoSDKAudioHelper* m_pAudiohelper=  video_sdk_obj->getAudioHelper();
         IZoomVideoSDKRecordingHelper* m_pRecordhelper =  video_sdk_obj->getRecordingHelper();
-
+        
         //needed for audio
         if (m_pAudiohelper) {
                 // Connect User's audio.
                 printf("Starting Audio\n");
-                m_pAudiohelper->startAudio();
+               // m_pAudiohelper->startAudio();
             }
         
  
 
-        //needed for audio
-         ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
-         printf("subscribe status is %d\n", err);
+        //needed for getting raw audio
+        //ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
+        //printf("subscribe status is %d\n", err);
        
 
        //needed for share source
@@ -82,7 +86,7 @@
             }
             else{
 
-                   printf("Error setting external source %s\n", err);
+                   printf("Error setting external source %s\n", err2);
             }            
         };
 
@@ -281,16 +285,20 @@
         session_context.userName = "Linux Bot";
         session_context.token = session_token.c_str();
         session_context.videoOption.localVideoOn = true;
-        session_context.audioOption.connect = true;
-        session_context.audioOption.mute = true;
-
+        session_context.audioOption.connect = true; //needed for sending raw audio data
+        session_context.audioOption.mute = false; //needed for sending raw audio data
+ 
          //needed for audio (dreamtcs test if needed for non virtual)
         ZoomVideoSDKVirtualAudioSpeaker* vSpeaker  =new ZoomVideoSDKVirtualAudioSpeaker();
          ZoomVideoSDKVirtualAudioMic* vMic  =new ZoomVideoSDKVirtualAudioMic();
-        session_context.virtualAudioMic=vMic;
+        //session_context.virtualAudioMic=vMic;
         session_context.virtualAudioSpeaker =vSpeaker;
         
-        IZoomVideoSDKSession *session = NULL;
+        //needed for send raw video
+          ZoomVideoSDKVideoSource* virtual_video_source = new ZoomVideoSDKVideoSource();
+         session_context.externalVideoSource=virtual_video_source;
+
+         IZoomVideoSDKSession *session = NULL;
         if (video_sdk_obj)
             session = video_sdk_obj->joinSession(session_context);
             
