@@ -17,7 +17,7 @@ using namespace ZOOMVIDEOSDK;
 	
 	 void ZoomVideoSDKVideoSource::onStartSend() {
 
-          printf("ZoomVideoSDKVideoSource::onStartSend() fired");
+          printf("ZoomVideoSDKVideoSource::onStartSend() fired \n");
       }
 	 void ZoomVideoSDKVideoSource::onStopSend()  {}
 	
