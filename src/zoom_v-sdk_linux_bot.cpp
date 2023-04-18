@@ -26,14 +26,22 @@
     #include "ZoomVideoSDKShareSource.h"
     #include "helpers/zoom_video_sdk_share_helper_interface.h"
 
-//needed for get raw video
+    //needed for get raw video
     #include "ZoomVideoSDKVideoSource.h"
-      #include "helpers/zoom_video_sdk_video_helper_interface.h"
+    #include "helpers/zoom_video_sdk_video_helper_interface.h"
 
     using Json = nlohmann::json;
     USING_ZOOM_VIDEO_SDK_NAMESPACE
     IZoomVideoSDK *video_sdk_obj;
     GMainLoop *loop;
+
+    //these are controls to demonstrate the flow
+    bool getRawAudio = true;
+    bool getRawVideo = true;
+    bool getRawAudio = true;
+    bool sendRawVideo = true;
+    bool sendRawAudio = true;
+    bool sendRawShare = true;
 
     std::string getSelfDirPath()
     {
@@ -56,39 +64,46 @@
         /// \brief Triggered when user enter the session.
         virtual void onSessionJoin()
         {
-
-            printf("Joined session successfully\n");
+        printf("Joined session successfully\n");
         
-        //needed for audio
-        IZoomVideoSDKAudioHelper* m_pAudiohelper=  video_sdk_obj->getAudioHelper();
-        IZoomVideoSDKRecordingHelper* m_pRecordhelper =  video_sdk_obj->getRecordingHelper();
-        
-        //needed for audio
-        if (m_pAudiohelper) {
-                // Connect User's audio.
-                printf("Starting Audio\n");
-               // m_pAudiohelper->startAudio();
+        if (getRawAudio){
+            IZoomVideoSDKAudioHelper* m_pAudiohelper=  video_sdk_obj->getAudioHelper();
+            if (m_pAudiohelper) {
+            //needed for getting raw audio
+            ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
+            printf("subscribe status is %d\n", err);
             }
+        }
+
+        if (sendRawAudio){
+             //needed for audio
+            IZoomVideoSDKAudioHelper* m_pAudiohelper=  video_sdk_obj->getAudioHelper();
+            if (m_pAudiohelper) {
+                            // Connect User's audio.
+                            printf("Starting Audio\n");
+                            m_pAudiohelper->startAudio();
+                        }
+        }
+      
+        //checking the use for this
+        //IZoomVideoSDKRecordingHelper* m_pRecordhelper =  video_sdk_obj->getRecordingHelper();
         
- 
 
-        //needed for getting raw audio
-        //ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
-        //printf("subscribe status is %d\n", err);
-       
-
-       //needed for share source
-       ZoomVideoSDKShareSource* vss = new ZoomVideoSDKShareSource();
-       ZoomVideoSDKErrors err2= video_sdk_obj->getShareHelper()->startSharingExternalSource(vss);    
-            if (err2==ZoomVideoSDKErrors::ZoomVideoSDKErrors_Success){
-
-
-            }
-            else{
-
+        if (sendRawShare){
+            
+            //needed for share source
+            //this needs to be done after joing session
+            ZoomVideoSDKShareSource* virtual_share_source = new ZoomVideoSDKShareSource();
+            ZoomVideoSDKErrors err2= video_sdk_obj->getShareHelper()->startSharingExternalSource(virtual_share_source);    
+                if (err2==ZoomVideoSDKErrors::ZoomVideoSDKErrors_Success){
+                }
+                else{
                    printf("Error setting external source %s\n", err2);
-            }            
+                }            
         };
+    }
+   
+
 
         /// \brief Triggered when session leaveSession
         virtual void onSessionLeave()
@@ -107,35 +122,39 @@
 
         virtual void onUserJoin(IZoomVideoSDKUserHelper *pUserHelper, IVideoSDKVector<IZoomVideoSDKUser *> *userList)
         {
-            if (userList)
-            {
-                int count = userList->GetCount();
-                for (int index = 0; index < count; index++)
+            if (getRawVideo){
+                if (userList)
                 {
-                    IZoomVideoSDKUser *user = userList->GetItem(index);
-                    if (user)
+                    int count = userList->GetCount();
+                    for (int index = 0; index < count; index++)
                     {
-                        RawDataFFMPEGEncoder *encoder = new RawDataFFMPEGEncoder(user);
-                    }
+                        IZoomVideoSDKUser *user = userList->GetItem(index);
+                        if (user)
+                        {
+                            RawDataFFMPEGEncoder *encoder = new RawDataFFMPEGEncoder(user);
+                        }
 
+                    }
                 }
             }
         };
 
         virtual void onUserLeave(IZoomVideoSDKUserHelper *pUserHelper, IVideoSDKVector<IZoomVideoSDKUser *> *userList)
         {
-            if (userList)
-            {
-                int count = userList->GetCount();
-                for (int index = 0; index < count; index++)
-                {
-                    IZoomVideoSDKUser *user = userList->GetItem(index);
-                    if (user)
+               if (getRawVideo){
+                    if (userList)
                     {
-                        RawDataFFMPEGEncoder::stop_encoding_for(user);
+                        int count = userList->GetCount();
+                        for (int index = 0; index < count; index++)
+                        {
+                            IZoomVideoSDKUser *user = userList->GetItem(index);
+                            if (user)
+                            {
+                                RawDataFFMPEGEncoder::stop_encoding_for(user);
+                            }
+                        }
                     }
-                }
-            }
+               }
         
         };
 
@@ -175,22 +194,24 @@
 
 
         virtual void onMixedAudioRawDataReceived(AudioRawData *data_){
+            if (getRawAudio){
+                    printf("onMixedAudioRawDataReceived\n");
+                    if (data_){
+                        printf("Length is : %d\n",data_->GetBufferLen());
+                        printf("Data buffer: %s\n", data_->GetBuffer());
+                        }
 
-        printf("onMixedAudioRawDataReceived\n");
-        if (data_){
-            printf("Length is : %d\n",data_->GetBufferLen());
-            printf("Data buffer: %s\n", data_->GetBuffer());
-            }
-            
+            }   
         };
 
 
         virtual void onOneWayAudioRawDataReceived(AudioRawData *data_, IZoomVideoSDKUser *pUser){
-
-        printf("onOneWayAudioRawDataReceived\n");
-          if (data_){
-         printf("Data buffer: %s\n", data_->GetBuffer());
-        printf("Length is : %d\n",data_->GetBufferLen());
+          if (getRawAudio){
+                printf("onOneWayAudioRawDataReceived\n");
+                if (data_){
+                printf("Data buffer: %s\n", data_->GetBuffer());
+                printf("Length is : %d\n",data_->GetBufferLen());
+                }
           }
         };
 
@@ -285,20 +306,39 @@
         session_context.userName = "Linux Bot";
         session_context.token = session_token.c_str();
         session_context.videoOption.localVideoOn = true;
-        session_context.audioOption.connect = true; //needed for sending raw audio data
-        session_context.audioOption.mute = false; //needed for sending raw audio data
+        session_context.audioOption.connect = false; 
+        session_context.audioOption.mute = true;
  
-         //needed for audio (dreamtcs test if needed for non virtual)
-        ZoomVideoSDKVirtualAudioSpeaker* vSpeaker  =new ZoomVideoSDKVirtualAudioSpeaker();
-         ZoomVideoSDKVirtualAudioMic* vMic  =new ZoomVideoSDKVirtualAudioMic();
-        //session_context.virtualAudioMic=vMic;
-        session_context.virtualAudioSpeaker =vSpeaker;
-        
-        //needed for send raw video
-          ZoomVideoSDKVideoSource* virtual_video_source = new ZoomVideoSDKVideoSource();
-         session_context.externalVideoSource=virtual_video_source;
+    
+        if (getRawVideo){
+            //nothing much to do before joining session
+        }
+     
 
-         IZoomVideoSDKSession *session = NULL;
+        if (getRawAudio){
+            ZoomVideoSDKVirtualAudioSpeaker* vSpeaker  =new ZoomVideoSDKVirtualAudioSpeaker();
+            session_context.virtualAudioSpeaker =vSpeaker;
+
+        }
+
+        if (sendRawVideo){
+            //needed for send raw video
+            //the sdk uses a Video Source to send raw video
+            //this needs to be done before joining session
+            ZoomVideoSDKVideoSource* virtual_video_source = new ZoomVideoSDKVideoSource();
+            session_context.externalVideoSource=virtual_video_source;
+        }
+
+
+         if (sendRawAudio){
+            session_context.audioOption.connect = true; //needed for sending raw audio data
+            session_context.audioOption.mute = false; //needed for sending raw audio data
+
+            ZoomVideoSDKVirtualAudioMic* vMic  =new ZoomVideoSDKVirtualAudioMic();
+            session_context.virtualAudioMic=vMic;
+        
+        }
+        IZoomVideoSDKSession *session = NULL;
         if (video_sdk_obj)
             session = video_sdk_obj->joinSession(session_context);
             
