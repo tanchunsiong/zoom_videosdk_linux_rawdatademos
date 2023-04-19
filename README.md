@@ -69,19 +69,33 @@ Run the app from bin folder:
 ALSA error messages appears to be from the SDK, this might be caused by missing speaker / microphone
 
 
-## walkthru on audio
+## walkthru on samples
+
+Here are some boolean variables which you can use to trace the code.
+These wil demonstrate some of the requirements needed to get / send raw data.
+
+```
+  //these are controls to demonstrate the flow
+    bool getRawAudio = false;
+    bool getRawVideo = false;
+    bool getRawShare = false;
+    bool sendRawVideo = false;
+    bool sendRawAudio = false;
+    bool sendRawShare = true;
+```
 
 for raw audio access to work, here are some high level requirements
 //needed for audio 
 the above comment in code will help you to find the code segments which are needed
 
 - IZoomVideoSDKVirtualAudioSpeaker
-  - Set this as virtual speake r and virtual mic in session_context before joining
+  - Set this as virtual speaker and virtual mic in session_context before joining
   - getAudioHelper() when in session, and call subscribe to start callback. 
     - If you do not call subscribe, there will be no callback for onmixedaudio and ononewayaudio. 
     - If you do not set the virtual speaker and virtual mic in session_context, there will be no callback for onmixedaudio and ononewayaudio.\
+
 ##converting PCM to mp3
  `ffmpeg -f s16le -ar 32000 -i output.pcm output.mp3`
 
 ## adding files
-if you add additions files, do include them in CMakeLists.txt
+if you add additions files (.cpp), do include them in CMakeLists.txt

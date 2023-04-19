@@ -37,12 +37,12 @@
     GMainLoop *loop;
 
     //these are controls to demonstrate the flow
-    bool getRawAudio = false;
+    bool getRawAudio = true;
     bool getRawVideo = false;
     bool getRawShare = false;
     bool sendRawVideo = false;
     bool sendRawAudio = false;
-    bool sendRawShare = true;
+    bool sendRawShare = false;
 
     std::string getSelfDirPath()
     {
@@ -363,6 +363,9 @@
             session_context.audioOption.connect = true ;
        
     
+            //dreamtcs check if this needed
+            //ZoomVideoSDKVirtualAudioMic* vMic  =new ZoomVideoSDKVirtualAudioMic();
+            //session_context.virtualAudioMic=vMic;
         }
 
         if (sendRawVideo){
@@ -381,10 +384,13 @@
             session_context.audioOption.connect = true; //needed for sending raw audio data
             session_context.audioOption.mute = false; //needed for sending raw audio data
 
+            //ZoomVideoSDKVirtualAudioMic is the object used to send audio
             ZoomVideoSDKVirtualAudioMic* vMic  =new ZoomVideoSDKVirtualAudioMic();
             session_context.virtualAudioMic=vMic;
         
         }
+
+        //join the session
         IZoomVideoSDKSession *session = NULL;
         if (video_sdk_obj)
             session = video_sdk_obj->joinSession(session_context);
