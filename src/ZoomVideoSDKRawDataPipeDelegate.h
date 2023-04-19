@@ -20,16 +20,16 @@ using namespace std::chrono;
 #include "helpers/zoom_video_sdk_user_helper_interface.h"
 using namespace ZOOMVIDEOSDK;
 
-class RawDataFFMPEGEncoder :
+class ZoomVideoSDKRawDataPipeDelegate :
     private IZoomVideoSDKRawDataPipeDelegate
 {
 	virtual void onRawDataFrameReceived(YUVRawDataI420* data);
 	virtual void onRawDataStatusChanged(RawDataStatus status);
-	static RawDataFFMPEGEncoder* find_instance(IZoomVideoSDKUser* user);
+	static ZoomVideoSDKRawDataPipeDelegate* find_instance(IZoomVideoSDKUser* user);
 
 	int instance_id_;
 	static int instance_count;
-	static std::vector<RawDataFFMPEGEncoder*> list_;
+	static std::vector<ZoomVideoSDKRawDataPipeDelegate*> list_;
 	IZoomVideoSDKUser* user_;
 
 	int ffmpeg_start(const char* userName, const char* userID, int sourceID);
@@ -84,9 +84,12 @@ class RawDataFFMPEGEncoder :
 	char fn_out[120];
 
 public: 
-	RawDataFFMPEGEncoder(IZoomVideoSDKUser* user);
-	~RawDataFFMPEGEncoder();
+	ZoomVideoSDKRawDataPipeDelegate(IZoomVideoSDKUser* user);
+	ZoomVideoSDKRawDataPipeDelegate(IZoomVideoSDKUser* user, bool isShareScreen);
+	~ZoomVideoSDKRawDataPipeDelegate();
+
 	static void stop_encoding_for(IZoomVideoSDKUser* user);
+		static void stop_encoding_for(IZoomVideoSDKUser* user, bool isShareScreen);
 	static void log(const wchar_t* format, ...);
 	static void err_msg(int code);
 };

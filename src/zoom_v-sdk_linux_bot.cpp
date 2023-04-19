@@ -15,7 +15,7 @@
     #include "zoom_video_sdk_def.h"
     #include "zoom_video_sdk_delegate_interface.h"
     #include "zoom_video_sdk_interface.h"
-    #include "raw_data_ffmpeg_encoder.h"
+  
 
     //needed for audio
     #include "ZoomVideoSDKVirtualAudioMic.h"
@@ -27,6 +27,7 @@
     #include "helpers/zoom_video_sdk_share_helper_interface.h"
 
     //needed for get raw video
+      #include "ZoomVideoSDKRawDataPipeDelegate.h"
     #include "ZoomVideoSDKVideoSource.h"
     #include "helpers/zoom_video_sdk_video_helper_interface.h"
 
@@ -36,11 +37,11 @@
     GMainLoop *loop;
 
     //these are controls to demonstrate the flow
-    bool getRawAudio = true;
-    bool getRawVideo = true;
-    bool getRawAudio = true;
-    bool sendRawVideo = true;
-    bool sendRawAudio = true;
+    bool getRawAudio = false;
+    bool getRawVideo = false;
+    bool getRawShare = false;
+    bool sendRawVideo = false;
+    bool sendRawAudio = false;
     bool sendRawShare = true;
 
     std::string getSelfDirPath()
@@ -82,6 +83,9 @@
                             // Connect User's audio.
                             printf("Starting Audio\n");
                             m_pAudiohelper->startAudio();
+                            
+                            
+                            
                         }
         }
       
@@ -95,7 +99,7 @@
             //this needs to be done after joing session
             ZoomVideoSDKShareSource* virtual_share_source = new ZoomVideoSDKShareSource();
             ZoomVideoSDKErrors err2= video_sdk_obj->getShareHelper()->startSharingExternalSource(virtual_share_source);    
-                if (err2==ZoomVideoSDKErrors::ZoomVideoSDKErrors_Success){
+                if (err2==ZoomVideoSDKErrors_Success){
                 }
                 else{
                    printf("Error setting external source %s\n", err2);
@@ -131,7 +135,7 @@
                         IZoomVideoSDKUser *user = userList->GetItem(index);
                         if (user)
                         {
-                            RawDataFFMPEGEncoder *encoder = new RawDataFFMPEGEncoder(user);
+                            ZoomVideoSDKRawDataPipeDelegate *encoder = new ZoomVideoSDKRawDataPipeDelegate(user);
                         }
 
                     }
@@ -150,7 +154,7 @@
                             IZoomVideoSDKUser *user = userList->GetItem(index);
                             if (user)
                             {
-                                RawDataFFMPEGEncoder::stop_encoding_for(user);
+                                ZoomVideoSDKRawDataPipeDelegate::stop_encoding_for(user);
                             }
                         }
                     }
@@ -168,9 +172,6 @@
  };
 
    
-        virtual void onUserShareStatusChanged(IZoomVideoSDKShareHelper *pShareHelper,
-                                            IZoomVideoSDKUser *pUser,
-                                            ZoomVideoSDKShareStatus status){};
 
  
         virtual void onLiveStreamStatusChanged(IZoomVideoSDKLiveStreamHelper *pLiveStreamHelper,
@@ -193,12 +194,29 @@
         virtual void onSessionPasswordWrong(IZoomVideoSDKPasswordHandler *handler){};
 
 
+        void savePcmBufferToFile(const std::string& filename, char* pcmBuffer, std::size_t bufferSize) {
+            std::ofstream outfile(filename, std::ios::out | std::ios::binary | std::ios::app);
+            outfile.write(reinterpret_cast<char*>(pcmBuffer), bufferSize);
+            outfile.close();
+            if (!outfile) {
+                std::cerr << "Error writing PCM data to file!" << std::endl;
+            } else {
+                std::cout << "PCM data saved to file: " << filename << std::endl;
+            }
+        }
+
         virtual void onMixedAudioRawDataReceived(AudioRawData *data_){
             if (getRawAudio){
+
+                    std::string filename = "output.pcm";
+
                     printf("onMixedAudioRawDataReceived\n");
                     if (data_){
-                        printf("Length is : %d\n",data_->GetBufferLen());
+                        savePcmBufferToFile(filename, data_->GetBuffer(),data_->GetBufferLen());
                         printf("Data buffer: %s\n", data_->GetBuffer());
+                        printf("Length is : %d\n",data_->GetBufferLen());
+                        printf("Sample is : %d\n",data_->GetSampleRate());
+                        printf("Channel is : %d\n",data_->GetChannelNum());
                         }
 
             }   
@@ -207,10 +225,17 @@
 
         virtual void onOneWayAudioRawDataReceived(AudioRawData *data_, IZoomVideoSDKUser *pUser){
           if (getRawAudio){
+                std::string filename = pUser->getUserID();
+                std::string extension = ".pcm";
+                filename.append(extension);
+
                 printf("onOneWayAudioRawDataReceived\n");
                 if (data_){
+                savePcmBufferToFile(filename, data_->GetBuffer(),data_->GetBufferLen());
                 printf("Data buffer: %s\n", data_->GetBuffer());
                 printf("Length is : %d\n",data_->GetBufferLen());
+                printf("Sample is : %d\n",data_->GetSampleRate());
+                printf("Channel is : %d\n",data_->GetChannelNum());
                 }
           }
         };
@@ -241,7 +266,21 @@
         virtual void onInviteByPhoneStatus(PhoneStatus status, PhoneFailedReason reason){};
         virtual void onCloudRecordingStatus(RecordingStatus status, IZoomVideoSDKRecordingConsentHandler* pHandler) {};
         virtual void onHostAskUnmute(){};
-        virtual void onUserShareStatusChanged(IZoomVideoSDKShareHelper *pShareHelper, IZoomVideoSDKUser *pUser, ZoomVideoSDKShareStatus status, ZoomVideoSDKShareType type) {}
+        virtual void onUserShareStatusChanged(IZoomVideoSDKShareHelper *pShareHelper, IZoomVideoSDKUser *pUser, ZoomVideoSDKShareStatus status, ZoomVideoSDKShareType type) {
+
+                                                if (getRawShare){
+                                                    if (status == ZoomVideoSDKShareStatus_Start){
+                                                          ZoomVideoSDKRawDataPipeDelegate *encoder = new ZoomVideoSDKRawDataPipeDelegate(pUser,true);
+                                                    }
+                                                    else if (status ==ZoomVideoSDKShareStatus_Stop){
+                                                        ZoomVideoSDKRawDataPipeDelegate::stop_encoding_for(pUser,true);
+                                                    }
+
+                                                }
+
+        }
+   
+
         virtual void onMultiCameraStreamStatusChanged(ZoomVideoSDKMultiCameraStreamStatus status, IZoomVideoSDKUser *pUser, IZoomVideoSDKRawDataPipe *pVideoPipe) {}
         virtual void onMicSpeakerVolumeChanged(unsigned int micVolume, unsigned int speakerVolume) {}
         virtual void onAudioDeviceStatusChanged(ZoomVideoSDKAudioDeviceType type, ZoomVideoSDKAudioDeviceStatus status) {}
@@ -268,7 +307,7 @@
         virtual void onVirtualSpeakerOneWayAudioReceived(AudioRawData* data_, IZoomVideoSDKUser* pUser) {
 
                  printf("onVirtualSpeakerOneWayAudioReceived() main\n");
-                printf("data %s \n",  data_->GetBuffer());
+                 printf("data %s \n",  data_->GetBuffer());
         };
 
         virtual void onVirtualSpeakerSharedAudioReceived(AudioRawData* data_) {
@@ -313,12 +352,17 @@
         if (getRawVideo){
             //nothing much to do before joining session
         }
-     
+        if (getRawShare){
+            //nothing much to do before joining session
+        }
 
         if (getRawAudio){
             ZoomVideoSDKVirtualAudioSpeaker* vSpeaker  =new ZoomVideoSDKVirtualAudioSpeaker();
             session_context.virtualAudioSpeaker =vSpeaker;
-
+           
+            session_context.audioOption.connect = true ;
+       
+    
         }
 
         if (sendRawVideo){
@@ -327,6 +371,9 @@
             //this needs to be done before joining session
             ZoomVideoSDKVideoSource* virtual_video_source = new ZoomVideoSDKVideoSource();
             session_context.externalVideoSource=virtual_video_source;
+        }
+        if (sendRawShare){
+            //nothing much to do before joining session
         }
 
 

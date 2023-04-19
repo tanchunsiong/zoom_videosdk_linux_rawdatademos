@@ -79,4 +79,9 @@ the above comment in code will help you to find the code segments which are need
   - Set this as virtual speake r and virtual mic in session_context before joining
   - getAudioHelper() when in session, and call subscribe to start callback. 
     - If you do not call subscribe, there will be no callback for onmixedaudio and ononewayaudio. 
-    - If you do not set the virtual speaker and virtual mic in session_context, there will be no callback for onmixedaudio and ononewayaudio.
+    - If you do not set the virtual speaker and virtual mic in session_context, there will be no callback for onmixedaudio and ononewayaudio.\
+##converting PCM to mp3
+ `ffmpeg -f s16le -ar 32000 -i output.pcm output.mp3`
+
+## adding files
+if you add additions files, do include them in CMakeLists.txt

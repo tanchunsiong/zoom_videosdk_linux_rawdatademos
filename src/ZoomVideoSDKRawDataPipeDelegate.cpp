@@ -1,22 +1,29 @@
 
-#include "raw_data_ffmpeg_encoder.h"
+#include "ZoomVideoSDKRawDataPipeDelegate.h"
 
 using namespace ZOOMVIDEOSDK;
 
 const AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE};
-std::vector<RawDataFFMPEGEncoder *> RawDataFFMPEGEncoder::list_;
-int RawDataFFMPEGEncoder::instance_count = 0;
+std::vector<ZoomVideoSDKRawDataPipeDelegate *> ZoomVideoSDKRawDataPipeDelegate::list_;
+int ZoomVideoSDKRawDataPipeDelegate::instance_count = 0;
 
-RawDataFFMPEGEncoder::RawDataFFMPEGEncoder(IZoomVideoSDKUser *user)
+ZoomVideoSDKRawDataPipeDelegate::ZoomVideoSDKRawDataPipeDelegate(IZoomVideoSDKUser *user)
 {
 	instance_id_ = instance_count++;
 	user_ = user;
 	user_->GetVideoPipe()->subscribe(ZoomVideoSDKResolution_360P, this);
-
 	list_.push_back(this);
 }
 
-RawDataFFMPEGEncoder::~RawDataFFMPEGEncoder()
+ZoomVideoSDKRawDataPipeDelegate::ZoomVideoSDKRawDataPipeDelegate(IZoomVideoSDKUser *user, bool isShareScreen)
+{
+	instance_id_ = instance_count++;
+	user_ = user;
+	user_->GetSharePipe()->subscribe(ZoomVideoSDKResolution_360P, this);
+	list_.push_back(this);
+}
+
+ZoomVideoSDKRawDataPipeDelegate::~ZoomVideoSDKRawDataPipeDelegate()
 {
 	// finish ffmpeg encoding
 	log(L"********** [%d] Finishing encoding, user: %s, %dx%d.\n", instance_id_, user_->getUserName(), in_width, in_height);
@@ -31,11 +38,12 @@ RawDataFFMPEGEncoder::~RawDataFFMPEGEncoder()
 	user_ = nullptr;
 }
 
-RawDataFFMPEGEncoder *RawDataFFMPEGEncoder::find_instance(IZoomVideoSDKUser *user)
+
+ZoomVideoSDKRawDataPipeDelegate *ZoomVideoSDKRawDataPipeDelegate::find_instance(IZoomVideoSDKUser *user)
 {
 	for (auto iter = list_.begin(); iter != list_.end(); iter++)
 	{
-		RawDataFFMPEGEncoder *item = *iter;
+		ZoomVideoSDKRawDataPipeDelegate *item = *iter;
 		if (item->user_ == user)
 		{
 			return item;
@@ -44,17 +52,27 @@ RawDataFFMPEGEncoder *RawDataFFMPEGEncoder::find_instance(IZoomVideoSDKUser *use
 	return nullptr;
 }
 
-void RawDataFFMPEGEncoder::stop_encoding_for(IZoomVideoSDKUser *user)
+void ZoomVideoSDKRawDataPipeDelegate::stop_encoding_for(IZoomVideoSDKUser *user)
 {
-	RawDataFFMPEGEncoder *encoder = RawDataFFMPEGEncoder::find_instance(user);
+	ZoomVideoSDKRawDataPipeDelegate *encoder = ZoomVideoSDKRawDataPipeDelegate::find_instance(user);
 	if (encoder)
 	{
-		encoder->~RawDataFFMPEGEncoder();
+		encoder->~ZoomVideoSDKRawDataPipeDelegate();
+	}
+}
+
+
+void ZoomVideoSDKRawDataPipeDelegate::stop_encoding_for(IZoomVideoSDKUser *user, bool isShareScreen)
+{
+	ZoomVideoSDKRawDataPipeDelegate *encoder = ZoomVideoSDKRawDataPipeDelegate::find_instance(user);
+	if (encoder)
+	{
+		encoder->~ZoomVideoSDKRawDataPipeDelegate();
 	}
 }
 int j = 0;
 
-void RawDataFFMPEGEncoder::onRawDataFrameReceived(YUVRawDataI420 *data)
+void ZoomVideoSDKRawDataPipeDelegate::onRawDataFrameReceived(YUVRawDataI420 *data)
 {
 	const zchar_t *userName = user_->getUserName();
 	const zchar_t *userID = user_->getUserID();
@@ -102,7 +120,7 @@ void RawDataFFMPEGEncoder::onRawDataFrameReceived(YUVRawDataI420 *data)
 	}
 }
 
-void RawDataFFMPEGEncoder::onRawDataStatusChanged(RawDataStatus status)
+void ZoomVideoSDKRawDataPipeDelegate::onRawDataStatusChanged(RawDataStatus status)
 {
 	log(L"********** [%d] onRawDataStatusChanged, user: %s, %d.\n", instance_id_, user_->getUserName(), status);
 	if (status == RawData_On)
@@ -113,14 +131,14 @@ void RawDataFFMPEGEncoder::onRawDataStatusChanged(RawDataStatus status)
 	}
 }
 
-void RawDataFFMPEGEncoder::err_msg(int code)
+void ZoomVideoSDKRawDataPipeDelegate::err_msg(int code)
 {
 	char errbuf[100];
 	av_strerror(code, errbuf, 100);
 	printf("%s\n", errbuf);
 }
 
-void RawDataFFMPEGEncoder::log(const wchar_t *format, ...)
+void ZoomVideoSDKRawDataPipeDelegate::log(const wchar_t *format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -128,7 +146,7 @@ void RawDataFFMPEGEncoder::log(const wchar_t *format, ...)
 	va_end(args);
 }
 
-int RawDataFFMPEGEncoder::ffmpeg_start(const char *userName, const char *userID, int sourceID)
+int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_start(const char *userName, const char *userID, int sourceID)
 {
 	int ret = 0;
 
@@ -244,7 +262,7 @@ int RawDataFFMPEGEncoder::ffmpeg_start(const char *userName, const char *userID,
 	return ret;
 }
 
-int RawDataFFMPEGEncoder::ffmpeg_filter_init()
+int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_filter_init()
 {
 	int ret;
 
@@ -318,7 +336,7 @@ int RawDataFFMPEGEncoder::ffmpeg_filter_init()
 	return ret;
 }
 
-int RawDataFFMPEGEncoder::ffmpeg_filter(uint8_t *Y, uint8_t *U, uint8_t *V)
+int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_filter(uint8_t *Y, uint8_t *U, uint8_t *V)
 {
 	// input Y,U,V
 	frame_in->data[0] = Y;
@@ -356,7 +374,7 @@ int RawDataFFMPEGEncoder::ffmpeg_filter(uint8_t *Y, uint8_t *U, uint8_t *V)
 	return 0;
 }
 
-int RawDataFFMPEGEncoder::ffmpeg_encode()
+int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_encode()
 {
 	int ret;
 
@@ -390,11 +408,11 @@ int RawDataFFMPEGEncoder::ffmpeg_encode()
 	return 0;
 }
 
-int RawDataFFMPEGEncoder::ffmpeg_stop()
+int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_stop()
 {
 
 	// Flush Encoder
-	if ((RawDataFFMPEGEncoder::ffmpeg_flush(pFormatCtx, 0)) < 0)
+	if ((ZoomVideoSDKRawDataPipeDelegate::ffmpeg_flush(pFormatCtx, 0)) < 0)
 	{
 		printf("Flushing encoder failed\n");
 		return -1;
@@ -424,7 +442,7 @@ int RawDataFFMPEGEncoder::ffmpeg_stop()
 	return 0;
 }
 
-int RawDataFFMPEGEncoder::ffmpeg_flush(AVFormatContext *fmt_ctx, unsigned int stream_index)
+int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_flush(AVFormatContext *fmt_ctx, unsigned int stream_index)
 {
 	int ret;
 	int got_frame;
