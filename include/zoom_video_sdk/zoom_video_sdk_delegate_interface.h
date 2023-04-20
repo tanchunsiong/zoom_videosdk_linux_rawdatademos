@@ -18,6 +18,7 @@
 #include "helpers/zoom_video_sdk_livestream_helper_interface.h"
 #include "helpers/zoom_video_sdk_chat_helper_interface.h"
 #include "helpers/zoom_video_sdk_network_connection_helper_interface.h"
+#include "helpers/zoom_video_sdk_crc_helper_interface.h"
 BEGIN_ZOOM_VIDEO_SDK_NAMESPACE
 class IZoomVideoSDKChatMessage;
 class IZoomVideoSDKPasswordHandler;
@@ -225,6 +226,10 @@ public:
 	/// \param status video network quality. For more details, see \link ZoomVideoSDKNetworkStatus \endlink enum.
 	/// \param pUser The pointer to a user object, see \link IZoomVideoSDKUser \endlink. 	
 	virtual void onUserVideoNetworkStatusChanged(ZoomVideoSDKNetworkStatus status, IZoomVideoSDKUser* pUser) = 0;
+
+	/// \brief Callback event of the call CRC device's status.
+	/// \param status The call status. For more details, see \link ZoomVideoSDKCRCCallStatus \endlink enum.
+	virtual void onCallCRCDeviceStatusChanged(ZoomVideoSDKCRCCallStatus status) = 0;
 };
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif

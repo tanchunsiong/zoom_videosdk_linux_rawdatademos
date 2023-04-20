@@ -48,7 +48,7 @@ public:
     /// \param frameLength Buffer length.
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
 	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
-	virtual ZoomVideoSDKErrors sendShareFrame(char* frameBuffer, int width, int height, int frameLength) = 0;
+	virtual ZoomVideoSDKErrors sendShareFrame(char* frameBuffer, int width, int height, int frameLength, FrameDataFormat format = FrameDataFormat_I420_FULL) = 0;
 };
 
 /// \brief Share source sink interface.

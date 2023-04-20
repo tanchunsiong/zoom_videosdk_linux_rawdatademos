@@ -277,5 +277,12 @@ struct ZoomVideoSDKSessionContext
 		sessionIdleTimeoutMins = 40;
 	}
 };
+
+enum FrameDataFormat
+{
+	FrameDataFormat_I420_LIMITED,
+	FrameDataFormat_I420_FULL,
+};
+
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif

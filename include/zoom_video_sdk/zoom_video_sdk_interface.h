@@ -23,6 +23,7 @@ class IZoomVideoSDKPhoneHelper;
 class IZoomVideoSDKAudioSettingHelper;
 class IZoomVideoSDKTestAudioDeviceHelper;
 class IZoomVideoSDKNetworkConnectionHelper;
+class IZoomVideoSDKCRCHelper;
 class IZoomVideoSDKVideoSettingHelper;
 class IZoomVideoSDKShareSettingHelper;
 /// \brief Zoom Video SDK API manager. Main singleton object that controls the video session creation, event callbacks and other main features of video SDK.
@@ -126,6 +127,10 @@ public:
 	/// \brief Get network connection helper object.
 	/// \return If the function succeeds, the return value is the network connection helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKNetworkConnectionHelper \endlink.
 	virtual IZoomVideoSDKNetworkConnectionHelper* getNetworkConnectionHelper() = 0;
+
+	/// \brief Get CRC helper object.
+	/// \return If the function succeeds, the return value is the CRC helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKCRCHelper
+	virtual IZoomVideoSDKCRCHelper* getCRCHelper() = 0;
 
 	/// \brief Get video setting helper object.
 /// \return If the function succeeds, the return value is the video setting helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKVideoSettingHelper \endlink.

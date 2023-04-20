@@ -170,8 +170,21 @@
         virtual void onUserAudioStatusChanged(IZoomVideoSDKAudioHelper *pAudioHelper,
                                             IVideoSDKVector<IZoomVideoSDKUser *> *userList){
  };
+        virtual void onUserShareStatusChanged(IZoomVideoSDKShareHelper *pShareHelper, IZoomVideoSDKUser *pUser, ZoomVideoSDKShareStatus status, ZoomVideoSDKShareType type) {
 
+                                                if (getRawShare){
+                                                    if (status == ZoomVideoSDKShareStatus_Start){
+                                                          ZoomVideoSDKRawDataPipeDelegate *encoder = new ZoomVideoSDKRawDataPipeDelegate(pUser,true);
+                                                    }
+                                                    else if (status ==ZoomVideoSDKShareStatus_Stop){
+                                                        ZoomVideoSDKRawDataPipeDelegate::stop_encoding_for(pUser,true);
+                                                    }
+
+                                                }
+
+        }
    
+         virtual void onUserRecordingConsent(IZoomVideoSDKUser* pUser) { };
 
  
         virtual void onLiveStreamStatusChanged(IZoomVideoSDKLiveStreamHelper *pLiveStreamHelper,
@@ -193,7 +206,7 @@
       
         virtual void onSessionPasswordWrong(IZoomVideoSDKPasswordHandler *handler){};
 
-
+        //this is a helper method, and not part of the implementation
         void savePcmBufferToFile(const std::string& filename, char* pcmBuffer, std::size_t bufferSize) {
             std::ofstream outfile(filename, std::ios::out | std::ios::binary | std::ios::app);
             outfile.write(reinterpret_cast<char*>(pcmBuffer), bufferSize);
@@ -266,27 +279,14 @@
         virtual void onInviteByPhoneStatus(PhoneStatus status, PhoneFailedReason reason){};
         virtual void onCloudRecordingStatus(RecordingStatus status, IZoomVideoSDKRecordingConsentHandler* pHandler) {};
         virtual void onHostAskUnmute(){};
-        virtual void onUserShareStatusChanged(IZoomVideoSDKShareHelper *pShareHelper, IZoomVideoSDKUser *pUser, ZoomVideoSDKShareStatus status, ZoomVideoSDKShareType type) {
 
-                                                if (getRawShare){
-                                                    if (status == ZoomVideoSDKShareStatus_Start){
-                                                          ZoomVideoSDKRawDataPipeDelegate *encoder = new ZoomVideoSDKRawDataPipeDelegate(pUser,true);
-                                                    }
-                                                    else if (status ==ZoomVideoSDKShareStatus_Stop){
-                                                        ZoomVideoSDKRawDataPipeDelegate::stop_encoding_for(pUser,true);
-                                                    }
-
-                                                }
-
-        }
-   
 
         virtual void onMultiCameraStreamStatusChanged(ZoomVideoSDKMultiCameraStreamStatus status, IZoomVideoSDKUser *pUser, IZoomVideoSDKRawDataPipe *pVideoPipe) {}
         virtual void onMicSpeakerVolumeChanged(unsigned int micVolume, unsigned int speakerVolume) {}
         virtual void onAudioDeviceStatusChanged(ZoomVideoSDKAudioDeviceType type, ZoomVideoSDKAudioDeviceStatus status) {}
         virtual void onTestMicStatusChanged(ZoomVideoSDK_TESTMIC_STATUS status) {}
         virtual void onSelectedAudioDeviceChanged() {}
-        virtual void onUserRecordingConsent(IZoomVideoSDKUser* pUser) { };
+  
         virtual void onLiveTranscriptionStatus(ZoomVideoSDKLiveTranscriptionStatus status) {};
         virtual void onLiveTranscriptionMsgReceived(const zchar_t* ltMsg, IZoomVideoSDKUser* pUser, ZoomVideoSDKLiveTranscriptionOperationType type) {};
         virtual void onLiveTranscriptionMsgInfoReceived(ILiveTranscriptionMessageInfo* messageInfo) {};
@@ -297,6 +297,8 @@
         virtual void onSSLCertVerifiedFailNotification(IZoomVideoSDKSSLCertificateInfo* info) {};	
         virtual void onUserVideoNetworkStatusChanged(ZoomVideoSDKNetworkStatus status, IZoomVideoSDKUser* pUser){};
     
+    	virtual void onCallCRCDeviceStatusChanged(ZoomVideoSDKCRCCallStatus status) {};
+        
        virtual void onVirtualSpeakerMixedAudioReceived(AudioRawData* data_){
 
                 printf("onVirtualSpeakerMixedAudioReceived() main \n");

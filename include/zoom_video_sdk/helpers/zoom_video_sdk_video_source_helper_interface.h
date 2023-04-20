@@ -36,7 +36,7 @@ public:
 	/// \param height Frame height.
 	/// \param frameLength Buffer length.
 	/// \param rotation Buffer rotation.
-	virtual void sendVideoFrame(char* frameBuffer, int width, int height, int frameLength, int rotation) = 0;
+	virtual void sendVideoFrame(char* frameBuffer, int width, int height, int frameLength, int rotation, FrameDataFormat format = FrameDataFormat_I420_FULL) = 0;
 };
 
 enum VideoSourceDataMode
