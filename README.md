@@ -85,6 +85,8 @@ These wil demonstrate some of the requirements needed to get / send raw data.
 ```
 
 for raw audio access to work, here are some high level requirements
+if you are using a normal desktop linux, there is no need for virtualspeaker or PulseAudio
+if you are using a headless linux (wsl, docker, ubuntu server) without soundcard, you will need to use virtualspeaker or PulseAudio
 //needed for audio 
 the above comment in code will help you to find the code segments which are needed
 
