@@ -31,18 +31,31 @@
     #include "ZoomVideoSDKVideoSource.h"
     #include "helpers/zoom_video_sdk_video_helper_interface.h"
 
+    //needed for command channel
+    #include "helpers/zoom_video_sdk_cmd_channel_interface.h"
+ 
+    //needed for chat
+    #include "helpers/zoom_video_sdk_chat_helper_interface.h"
+    #include "zoom_video_sdk_chat_message_interface.h"
+
     using Json = nlohmann::json;
     USING_ZOOM_VIDEO_SDK_NAMESPACE
     IZoomVideoSDK *video_sdk_obj;
     GMainLoop *loop;
 
     //these are controls to demonstrate the flow
-    bool getRawAudio = true;
+    bool getRawAudio = false;
     bool getRawVideo = false;
     bool getRawShare = false;
     bool sendRawVideo = false;
     bool sendRawAudio = false;
     bool sendRawShare = false;
+    bool enableCommandChannel = false;
+    bool enableLiveStreaming = false;
+    bool enableChat = false;
+    bool enableCloudRecording = true;
+    bool enableCallOut = false;
+
 
     std::string getSelfDirPath()
     {
@@ -67,14 +80,7 @@
         {
         printf("Joined session successfully\n");
         
-        if (getRawAudio){
-            IZoomVideoSDKAudioHelper* m_pAudiohelper=  video_sdk_obj->getAudioHelper();
-            if (m_pAudiohelper) {
-            //needed for getting raw audio
-            ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
-            printf("subscribe status is %d\n", err);
-            }
-        }
+      
 
         if (sendRawAudio){
              //needed for audio
@@ -105,6 +111,74 @@
                    printf("Error setting external source %s\n", err2);
                 }            
         };
+
+        if (enableCommandChannel){
+
+              IZoomVideoSDKCmdChannel* commandChannel = video_sdk_obj->getCmdChannel();
+            commandChannel->sendCommand (NULL, "hello world");
+        }
+         if (enableLiveStreaming){
+
+              IZoomVideoSDKLiveStreamHelper* pLiveStreamHelper = video_sdk_obj->getLiveStreamHelper();
+                        // Check if live stream can start.
+                if (pLiveStreamHelper->canStartLiveStream() == ZoomVideoSDKErrors_Success) {
+        zchar_t* streamUrl = "rtmp://a.rtmp.youtube.com/live2";
+        zchar_t* key = "6kft-yswg-uf68-0sj1-49gm";
+        zchar_t* broadcastUrl = "https://studio.youtube.com/video/oCJdsKSrTHo/livestreaming";
+
+                    // Call startLiveStream to begin live stream.
+                    int err = pLiveStreamHelper->startLiveStream(streamUrl, key, broadcastUrl);
+
+                    if (err == ZoomVideoSDKErrors_Success)
+                    {
+                            // Live stream successfully began.
+                    }
+                    else
+                    {
+                            // Live stream could not start.
+                    }
+                }
+
+        }
+
+                 if (enableChat){
+
+                    IZoomVideoSDKChatHelper* pChatHelper = video_sdk_obj->getChatHelper();
+                            
+                    // Check if chat is enabled in this session.
+                    if (pChatHelper->isChatDisabled() == false && pChatHelper->isPrivateChatDisabled() == false) {
+                        
+                        // Send message to User.
+                        pChatHelper->sendChatToAll("hello world");
+                    }
+
+                }
+
+
+                if (enableCloudRecording){
+
+                  IZoomVideoSDKRecordingHelper* m_pRecordhelper= video_sdk_obj->getRecordingHelper();
+                  ZoomVideoSDKErrors err=   m_pRecordhelper->canStartRecording();
+                  if(err==ZoomVideoSDKErrors_Success){
+                    ZoomVideoSDKErrors err2=    m_pRecordhelper->startCloudRecording();
+
+                    if (err2 != ZoomVideoSDKErrors_Success){
+
+                        
+                    }
+                  }
+
+                }
+
+                if (enableCallOut){
+
+                IZoomVideoSDKPhoneHelper* m_phonehelper= video_sdk_obj->getPhoneHelper();
+                    if (m_phonehelper->isSupportPhoneFeature()){
+                        
+                        m_phonehelper->inviteByPhone("+65","93632452","chun");
+                
+                    }
+                }
     }
    
 
@@ -169,6 +243,16 @@
 
         virtual void onUserAudioStatusChanged(IZoomVideoSDKAudioHelper *pAudioHelper,
                                             IVideoSDKVector<IZoomVideoSDKUser *> *userList){
+
+  if (getRawAudio){
+            IZoomVideoSDKAudioHelper* m_pAudiohelper=  video_sdk_obj->getAudioHelper();
+            if (m_pAudiohelper) {
+            //needed for getting raw audio
+            ZoomVideoSDKErrors err=  m_pAudiohelper->subscribe();
+            printf("subscribe status is %d\n", err);
+            }
+        }
+
  };
         virtual void onUserShareStatusChanged(IZoomVideoSDKShareHelper *pShareHelper, IZoomVideoSDKUser *pUser, ZoomVideoSDKShareStatus status, ZoomVideoSDKShareType type) {
 
@@ -191,7 +275,34 @@
                                             ZoomVideoSDKLiveStreamStatus status){};
 
 
-        virtual void onChatNewMessageNotify(IZoomVideoSDKChatHelper *pChatHelper, IZoomVideoSDKChatMessage *messageItem){};
+        virtual void onChatNewMessageNotify(IZoomVideoSDKChatHelper *pChatHelper, IZoomVideoSDKChatMessage *messageItem){
+
+            if (enableChat){
+                if (!messageItem)
+                    return;
+
+              
+                const zchar_t* szMessageContent = messageItem->getContent();
+                IZoomVideoSDKUser* pRecievingUser = messageItem->getReceiveUser();
+                IZoomVideoSDKUser* pSendingUser = messageItem->getSendUser();
+                 const zchar_t* sendUserName =pSendingUser->getUserName();
+                 const zchar_t* recUserName="all";
+                 if (pRecievingUser){
+                  recUserName=pRecievingUser->getUserName();
+                  }
+                printf("New message from %s to %s  %s\n",  sendUserName, recUserName, szMessageContent);
+          
+            
+
+                messageItem->isChatToAll(); // Returns false for private messages.
+                messageItem->isSelfSend(); // Returns true if the current user sent the message.
+                messageItem->getTimeStamp(); // The time at which the message was sent.
+                messageItem->getReceiveUser(); // The recipient of a private message.
+
+
+            }
+
+        };
 
      
         virtual void onUserHostChanged(IZoomVideoSDKUserHelper *pUserHelper, IZoomVideoSDKUser *pUser){};
@@ -271,13 +382,25 @@
 
 
         virtual void onCommandReceived(IZoomVideoSDKUser *sender, const zchar_t *strCmd){
-            
-  printf("onCommandReceived() Message: %s\n", strCmd);    
-
+            if (enableCommandChannel){
+            printf("onCommandReceived() Message: %s\n", strCmd);    
+            }
         }
-        virtual void onCommandChannelConnectResult(bool isSuccess){};
+        virtual void onCommandChannelConnectResult(bool isSuccess){
+
+             if (enableCommandChannel){
+        
+            }
+        
+        };
         virtual void onInviteByPhoneStatus(PhoneStatus status, PhoneFailedReason reason){};
-        virtual void onCloudRecordingStatus(RecordingStatus status, IZoomVideoSDKRecordingConsentHandler* pHandler) {};
+        virtual void onCloudRecordingStatus(RecordingStatus status, IZoomVideoSDKRecordingConsentHandler* pHandler) {
+                if (enableCloudRecording){
+
+
+                }
+
+        };
         virtual void onHostAskUnmute(){};
 
 
@@ -291,7 +414,14 @@
         virtual void onLiveTranscriptionMsgReceived(const zchar_t* ltMsg, IZoomVideoSDKUser* pUser, ZoomVideoSDKLiveTranscriptionOperationType type) {};
         virtual void onLiveTranscriptionMsgInfoReceived(ILiveTranscriptionMessageInfo* messageInfo) {};
         virtual void onLiveTranscriptionMsgError(ILiveTranscriptionLanguage* spokenLanguage, ILiveTranscriptionLanguage* transcriptLanguage) {};
-        virtual void onChatMsgDeleteNotification(IZoomVideoSDKChatHelper* pChatHelper, const zchar_t* msgID, ZoomVideoSDKChatMessageDeleteType deleteBy){};
+        virtual void onChatMsgDeleteNotification(IZoomVideoSDKChatHelper* pChatHelper, const zchar_t* msgID, ZoomVideoSDKChatMessageDeleteType deleteBy){
+            if (enableChat){
+
+
+            }
+
+
+        };
         virtual void onProxyDetectComplete() {};
         virtual void onProxySettingNotification(IZoomVideoSDKProxySettingHandler* handler){};
         virtual void onSSLCertVerifiedFailNotification(IZoomVideoSDKSSLCertificateInfo* info) {};	
@@ -359,8 +489,10 @@
         }
 
         if (getRawAudio){
-            ZoomVideoSDKVirtualAudioSpeaker* vSpeaker  =new ZoomVideoSDKVirtualAudioSpeaker();
-            session_context.virtualAudioSpeaker =vSpeaker;
+            //this code to load virtualaudiospeaker is needed if you are using headless linux, or linux which does not come with soundcard.
+            //if you do not wish to load virtualaudiospeaker, you can alternatively install `apt install pulseaudio` on your linux distro
+            //ZoomVideoSDKVirtualAudioSpeaker* vSpeaker  =new ZoomVideoSDKVirtualAudioSpeaker();
+            //session_context.virtualAudioSpeaker =vSpeaker;
            
             session_context.audioOption.connect = true ;
        
