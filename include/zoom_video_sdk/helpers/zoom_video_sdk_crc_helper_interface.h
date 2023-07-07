@@ -41,20 +41,22 @@ class IZoomVideoSDKCRCHelper
 public:
 	virtual ~IZoomVideoSDKCRCHelper() {}
 
-	/// \brief Queries if the CRC feature is enabled.
-	/// \return True means that the CRC is enabled, otherwise it's disabled.
-	/// \remarks Only get the correct value after joining the session.
+	/// \brief Query if the CRC feature enabled.
+	/// \return True means that the CRC enabled, otherwise disabled.
+	/// \remarks Only get the correct value after join session.
 	virtual bool isCRCEnabled() = 0;
 
-	/// \brief Calls the CRC device. Only available for the host/co-host.
-	/// \param sAddress The CRC device's IP address.
+	/// \brief Call CRC device.
+	/// \param sAddress The CRC device's ip.
 	/// \param eProtocol The protocol of the CRC device.
-	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success. Otherwise the function returns an error. For details, see \link ZoomVideoSDKErrors \endlink enum.
+	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success. 
+	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
 	/// \remarks If the function succeeds, the IZoomVideoSDKDelegate::onCallCRCDeviceStatusChanged(status) will be triggered once the call crc device status changes.
 	virtual ZoomVideoSDKErrors callCRCDevice(const zchar_t* sAddress, ZoomVideoSDKCRCProtocol eProtocol) = 0;
 
-	/// \brief Cancels the call to the CRC device. Only available for the host/co-host.
-	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success. Otherwise the function returns an error. For details, see \link ZoomVideoSDKErrors \endlink enum.
+	/// \brief Cancel call CRC device.
+	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
 	virtual ZoomVideoSDKErrors cancelCallCRCDevice() = 0;
 };
 

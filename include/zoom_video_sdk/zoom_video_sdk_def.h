@@ -230,15 +230,17 @@ struct ZoomVideoSDKVideoOption
 */
 struct ZoomVideoSDKAudioOption 
 {
-    bool connect; /// \brief Connect local audio or not.
-    bool mute;    /// \brief Mute audio or not.
-	bool isMyVoiceInMix; /// \brief Is my voice in the mixed audio raw data?
+    bool connect; /// \brief Whether to connect local audio or not.
+    bool mute;    /// \brief Whether to mute audio or not.
+	bool isMyVoiceInMix; /// \brief Determine whether my voice is in the mixed audio raw data or not. If true, yes, if false, no.
+	bool autoAdjustSpeakerVolume; /// \brief Whether to automatically adjust the volume of the speaker or not. If true, this will automatically adjust the volume if it is muted or low. If false it will not.
 
 	ZoomVideoSDKAudioOption()
 	{
 		connect = true;
 		mute = false;
 		isMyVoiceInMix = true;
+		autoAdjustSpeakerVolume = false;
 	}
 };
 

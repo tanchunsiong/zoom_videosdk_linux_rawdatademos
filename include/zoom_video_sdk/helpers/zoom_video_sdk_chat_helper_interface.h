@@ -19,6 +19,17 @@ typedef enum {
     ZoomVideoSDKChatDelete_ByDlp,       ///<Indicates that the message was deleted by Data Loss Prevention (dlp). This happens when the message goes against the host organization's compliance policies.
 }ZoomVideoSDKChatMessageDeleteType;
 
+/// \brief The chat privilege type are sent in the \link onChatPrivilegeChanged  \endlink callback.
+///
+typedef enum {
+    ZoomVideoSDKChatPrivilege_Unknown = 0,             ///<Unknown type
+    ZoomVideoSDKChatPrivilege_Publicly_And_Privately,  ///<allow participant to chat with everyone
+    ZoomVideoSDKChatPrivilege_No_One,                  ///<allow participant to chat with no one
+    ZoomVideoSDKChatPrivilege_Publicly,                ///<allow participant to chat with the host, co-host, and everyone.
+}ZoomVideoSDKChatPrivilegeType;
+
+
+
 class IZoomVideoSDKUser;
 /// \brief Chat helper interface.
 ///
@@ -56,6 +67,16 @@ public:
 	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
 	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
 	virtual ZoomVideoSDKErrors deleteChatMessage(const zchar_t* msgID) = 0;
+
+    /// \brief Set participant Chat Privilege when in session. Only session host/manager can run the function.
+    /// \param privilege The chat privilege of the participant.
+    /// \return If the function succeeds, it will return ZoomVideoSDKErrors_Success, otherwise failed.
+    ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
+	virtual ZoomVideoSDKErrors changeChatPrivilege(ZoomVideoSDKChatPrivilegeType privilege) = 0;
+
+    /// \brief Get participant Chat Privilege when in session.
+    /// \return The result of participant chat priviledge.
+	virtual ZoomVideoSDKChatPrivilegeType getChatPrivilege() = 0;
 };
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif

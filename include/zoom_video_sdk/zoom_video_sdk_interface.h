@@ -26,6 +26,7 @@ class IZoomVideoSDKNetworkConnectionHelper;
 class IZoomVideoSDKCRCHelper;
 class IZoomVideoSDKVideoSettingHelper;
 class IZoomVideoSDKShareSettingHelper;
+class IZoomVideoSDKLiveTranscriptionHelper;
 /// \brief Zoom Video SDK API manager. Main singleton object that controls the video session creation, event callbacks and other main features of video SDK.
 ///
 class IZoomVideoSDK
@@ -133,12 +134,16 @@ public:
 	virtual IZoomVideoSDKCRCHelper* getCRCHelper() = 0;
 
 	/// \brief Get video setting helper object.
-/// \return If the function succeeds, the return value is the video setting helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKVideoSettingHelper \endlink.
+	/// \return If the function succeeds, the return value is the video setting helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKVideoSettingHelper \endlink.
 	virtual IZoomVideoSDKVideoSettingHelper* getVideoSettingHelper() = 0;
 
 	/// \brief Get share setting helper object.
 	/// \return If the function succeeds, the return value is the share setting helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKShareSettingHelper \endlink.
 	virtual IZoomVideoSDKShareSettingHelper* getShareSettingHelper() = 0;
+
+	/// \brief Get live transcription helper object.
+	/// \return If the function succeeds, the return value is the live transcription helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKLiveTranscriptionHelper \endlink.
+	virtual IZoomVideoSDKLiveTranscriptionHelper* getLiveTranscriptionHelper() = 0;
 };
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif

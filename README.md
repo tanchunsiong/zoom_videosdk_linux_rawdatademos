@@ -72,7 +72,7 @@ ALSA error messages appears to be from the SDK, this might be caused by missing 
 ## walkthru on samples
 
 Here are some boolean variables which you can use to trace the code.
-These wil demonstrate some of the requirements needed to get / send raw data.
+These wilL demonstrate some of the requirements needed to get / send raw data.
 
 ```
   //these are controls to demonstrate the flow

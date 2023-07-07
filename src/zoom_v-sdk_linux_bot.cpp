@@ -16,6 +16,7 @@
     #include "zoom_video_sdk_delegate_interface.h"
     #include "zoom_video_sdk_interface.h"
   
+  #include "zoom_video_sdk_platform.h"
 
     //needed for audio
     #include "ZoomVideoSDKVirtualAudioMic.h"
@@ -38,6 +39,9 @@
     #include "helpers/zoom_video_sdk_chat_helper_interface.h"
     #include "zoom_video_sdk_chat_message_interface.h"
 
+    //needed for LTT
+    #include "zoom_video_sdk_session_info_interface.h"
+
     using Json = nlohmann::json;
     USING_ZOOM_VIDEO_SDK_NAMESPACE
     IZoomVideoSDK *video_sdk_obj;
@@ -52,10 +56,10 @@
     bool sendRawShare = false;
     bool enableCommandChannel = false;
     bool enableLiveStreaming = false;
-    bool enableChat = false;
-    bool enableCloudRecording = true;
+    bool enableChat = true;
+    bool enableCloudRecording = false;
     bool enableCallOut = false;
-
+    bool enableLTT = true; //bug
 
     std::string getSelfDirPath()
     {
@@ -95,8 +99,7 @@
                         }
         }
       
-        //checking the use for this
-        //IZoomVideoSDKRecordingHelper* m_pRecordhelper =  video_sdk_obj->getRecordingHelper();
+     
         
 
         if (sendRawShare){
@@ -105,6 +108,7 @@
             //this needs to be done after joing session
             ZoomVideoSDKShareSource* virtual_share_source = new ZoomVideoSDKShareSource();
             ZoomVideoSDKErrors err2= video_sdk_obj->getShareHelper()->startSharingExternalSource(virtual_share_source);    
+            
                 if (err2==ZoomVideoSDKErrors_Success){
                 }
                 else{
@@ -122,9 +126,9 @@
               IZoomVideoSDKLiveStreamHelper* pLiveStreamHelper = video_sdk_obj->getLiveStreamHelper();
                         // Check if live stream can start.
                 if (pLiveStreamHelper->canStartLiveStream() == ZoomVideoSDKErrors_Success) {
-        zchar_t* streamUrl = "rtmp://a.rtmp.youtube.com/live2";
-        zchar_t* key = "6kft-yswg-uf68-0sj1-49gm";
-        zchar_t* broadcastUrl = "https://studio.youtube.com/video/oCJdsKSrTHo/livestreaming";
+                    zchar_t* streamUrl = "rtmp://a.rtmp.youtube.com/live2";
+                    zchar_t* key = "xxxx-yswg-xxxx-0sj1-xxxx";
+                    zchar_t* broadcastUrl = "https://studio.youtube.com/video/xxxx/livestreaming";
 
                     // Call startLiveStream to begin live stream.
                     int err = pLiveStreamHelper->startLiveStream(streamUrl, key, broadcastUrl);
@@ -175,10 +179,48 @@
                 IZoomVideoSDKPhoneHelper* m_phonehelper= video_sdk_obj->getPhoneHelper();
                     if (m_phonehelper->isSupportPhoneFeature()){
                         
-                        m_phonehelper->inviteByPhone("+65","93632452","chun");
+                        m_phonehelper->inviteByPhone("+65","12345678","alice");
                 
                     }
                 }
+                if (enableLTT){
+                    //needed for audio
+                    IZoomVideoSDKAudioHelper* m_pAudiohelper=  video_sdk_obj->getAudioHelper();
+                    if (m_pAudiohelper) {
+                                    // Connect User's audio.
+                                    printf("Starting Audio\n");
+                                    m_pAudiohelper->startAudio();
+                                    
+                                    
+                                    
+                                }
+                }
+
+                if (enableLTT){
+                IZoomVideoSDKSession* m_sessionhelper = video_sdk_obj->getSessionInfo();
+                IZoomVideoSDKUser *user=   m_sessionhelper->getMyself();
+                //IZoomVideoSDKUser* user=   m_sessionhelper->getRemoteUsers()->GetItem(0);
+                if (user)
+                {
+
+                          IZoomVideoSDKLiveTranscriptionHelper* m_ltthelper= video_sdk_obj->getLiveTranscriptionHelper();
+                         if (m_ltthelper){
+                            //m_ltthelper->setSpokenLanguage(0);
+                            //m_ltthelper->setTranslationLanguage(1);
+                            bool canstartLTT = m_ltthelper->canStartLiveTranscription();
+                            if (canstartLTT){
+                                   ZoomVideoSDKErrors err= m_ltthelper->startLiveTranscription();
+                                    //printf(">startLiveTranscription() status is : %s\n",err);
+                            }
+                         }//end if m_ltthelper
+                        
+
+                    
+                }
+                
+            }
+
+            
     }
    
 
@@ -215,6 +257,8 @@
                     }
                 }
             }
+      
+              
         };
 
         virtual void onUserLeave(IZoomVideoSDKUserHelper *pUserHelper, IVideoSDKVector<IZoomVideoSDKUser *> *userList)
@@ -283,6 +327,8 @@
 
               
                 const zchar_t* szMessageContent = messageItem->getContent();
+                
+            
                 IZoomVideoSDKUser* pRecievingUser = messageItem->getReceiveUser();
                 IZoomVideoSDKUser* pSendingUser = messageItem->getSendUser();
                  const zchar_t* sendUserName =pSendingUser->getUserName();
@@ -298,6 +344,83 @@
                 messageItem->isSelfSend(); // Returns true if the current user sent the message.
                 messageItem->getTimeStamp(); // The time at which the message was sent.
                 messageItem->getReceiveUser(); // The recipient of a private message.
+
+
+               //dreamtcs testing
+               if (enableLTT){
+
+          
+                    size_t len = strlen(szMessageContent) + 1;
+                    wchar_t* wstr = new wchar_t[len];
+                    mbstowcs(wstr, szMessageContent, len);
+                                
+                
+
+                    IZoomVideoSDKSession* m_sessionhelper = video_sdk_obj->getSessionInfo();
+                    IZoomVideoSDKUser *user=   m_sessionhelper->getMyself();
+                    //IZoomVideoSDKUser* user=   m_sessionhelper->getRemoteUsers()->GetItem(0);
+                    if (user)
+                        {
+
+                                IZoomVideoSDKLiveTranscriptionHelper* m_ltthelper= video_sdk_obj->getLiveTranscriptionHelper();
+                                if (m_ltthelper){
+                                    if (wcscmp(wstr, L"set0")==0){
+                                    m_ltthelper->setTranslationLanguage(-1);
+                                
+                                    }
+                                         if (wcscmp(wstr, L"set1")==0){
+                                    m_ltthelper->setTranslationLanguage(1);
+                                
+                                    }
+                                    if (wcscmp(wstr, L"stopLTT")==0){
+                                        m_ltthelper->stopLiveTranscription();
+                                    }
+
+                                    if (wcscmp(wstr, L"startLTT")==0){
+                                            m_ltthelper->startLiveTranscription();
+                                    }
+                                    if (wcscmp(wstr, L"getSpoken")==0){
+                                           ILiveTranscriptionLanguage *spokenLanguage =  m_ltthelper->getSpokenLanguage();
+                                             printf("Spoken Language NAme: %s\n", spokenLanguage->getLTTLanguageName());
+                                    }
+                                    if (wcscmp(wstr, L"getLang")==0){
+                                        IVideoSDKVector<ILiveTranscriptionLanguage*>* availableTranslateLanguages = m_ltthelper->getAvailableTranslationLanguages();
+                                        IVideoSDKVector<ILiveTranscriptionLanguage*>* availableSpokenLanguages  =   m_ltthelper->getAvailableSpokenLanguages();
+
+
+
+                                    if (availableTranslateLanguages) {
+                                        for (size_t i = 0; i < availableTranslateLanguages->GetCount(); ++i) {
+                                            ILiveTranscriptionLanguage* language = availableTranslateLanguages->GetItem(i);
+                                            if (language) {
+                                                printf("Translate Language ID: %d\n", language->getLTTLanguageID());
+                                                printf("Translate Language Name: %s\n", language->getLTTLanguageName());
+                                                // Print other properties as needed
+                                                printf("---------------------\n");
+                                            }
+                                        }
+                                    }
+
+                                    if (availableSpokenLanguages) {
+                                        for (size_t i = 0; i < availableSpokenLanguages->GetCount(); ++i) {
+                                            ILiveTranscriptionLanguage* language = availableSpokenLanguages->GetItem(i);
+                                            if (language) {
+                                                printf("Spoken Language ID: %d\n", language->getLTTLanguageID());
+                                                printf("Spoken Language Name: %s\n", language->getLTTLanguageName());
+                                                // Print other properties as needed
+                                                printf("---------------------\n");
+                                            }
+                                        }
+                                    }
+
+                                    }
+                                }//end if m_ltthelper
+                           }
+                                
+
+                            
+                        
+                        }
 
 
             }
@@ -410,10 +533,31 @@
         virtual void onTestMicStatusChanged(ZoomVideoSDK_TESTMIC_STATUS status) {}
         virtual void onSelectedAudioDeviceChanged() {}
   
-        virtual void onLiveTranscriptionStatus(ZoomVideoSDKLiveTranscriptionStatus status) {};
-        virtual void onLiveTranscriptionMsgReceived(const zchar_t* ltMsg, IZoomVideoSDKUser* pUser, ZoomVideoSDKLiveTranscriptionOperationType type) {};
-        virtual void onLiveTranscriptionMsgInfoReceived(ILiveTranscriptionMessageInfo* messageInfo) {};
-        virtual void onLiveTranscriptionMsgError(ILiveTranscriptionLanguage* spokenLanguage, ILiveTranscriptionLanguage* transcriptLanguage) {};
+        virtual void onLiveTranscriptionStatus(ZoomVideoSDKLiveTranscriptionStatus status) {
+        if (enableLTT){
+                printf("onLiveTranscriptionStatus() Status is : %d\n",status);
+        }
+
+        };
+        virtual void onLiveTranscriptionMsgReceived(const zchar_t* ltMsg, IZoomVideoSDKUser* pUser, ZoomVideoSDKLiveTranscriptionOperationType type) {
+                    if (enableLTT){
+              //this is deprecating
+              //printf("onLiveTranscriptionMsgReceived() Message is : %s\n",ltMsg);
+              
+        }
+        };
+        virtual void onLiveTranscriptionMsgInfoReceived(ILiveTranscriptionMessageInfo* messageInfo) {
+                    if (enableLTT){
+                printf("onLiveTranscriptionMsgInfoReceived() MessageInfoContent is : %s\n",messageInfo->getMessageContent());
+                printf("onLiveTranscriptionMsgInfoReceived() MessageInfoType is : %d\n",messageInfo->getMessageType());
+                
+        }
+        };
+        virtual void onLiveTranscriptionMsgError(ILiveTranscriptionLanguage* spokenLanguage, ILiveTranscriptionLanguage* transcriptLanguage) {
+                    if (enableLTT){
+             printf("onLiveTranscriptionMsgError() LiveTranscriptionLanguage is : %s\n",transcriptLanguage->getLTTLanguageName());
+        }
+        };
         virtual void onChatMsgDeleteNotification(IZoomVideoSDKChatHelper* pChatHelper, const zchar_t* msgID, ZoomVideoSDKChatMessageDeleteType deleteBy){
             if (enableChat){
 
@@ -446,6 +590,19 @@
             printf("onVirtualSpeakerSharedAudioReceived() main\n");
                 printf("data %s \n",  data_->GetBuffer());
         };
+
+  virtual void onOriginalLanguageMsgReceived(ILiveTranscriptionMessageInfo* messageInfo){};
+ 
+ virtual void onChatPrivilegeChanged(IZoomVideoSDKChatHelper* pChatHelper, ZoomVideoSDKChatPrivilegeType privilege){};
+   
+  virtual void onVideoCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle){};
+
+  virtual void onShareCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle){};
+
+    virtual void onAnnotationHelperCleanUp(IZoomVideoSDKAnnotationHelper* helper) {};
+
+    virtual void onAnnotationPrivilegeChange(IZoomVideoSDKUser* pUser, bool enable) {};
+
     };
 
 
@@ -479,7 +636,7 @@
         session_context.videoOption.localVideoOn = true;
         session_context.audioOption.connect = false; 
         session_context.audioOption.mute = true;
- 
+ 	
     
         if (getRawVideo){
             //nothing much to do before joining session
@@ -523,6 +680,11 @@
             session_context.virtualAudioMic=vMic;
         
         }
+        	if (enableLTT) {
+			session_context.audioOption.connect = true; //needed for sending raw audio data
+			session_context.audioOption.mute = false; //needed for sending raw audio data
+
+		}
 
         //join the session
         IZoomVideoSDKSession *session = NULL;

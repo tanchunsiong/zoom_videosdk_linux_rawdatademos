@@ -69,6 +69,7 @@ public:
 /// \brief Share helper interface.
 ///
 class IZoomVideoSDKRawDataPipeDelegate;
+class IZoomVideoSDKAnnotationHelper;
 class IZoomVideoSDKShareHelper
 {
 public:
@@ -119,14 +120,14 @@ public:
     /// \return True indicates that sharing is locked, otherwise false.
     virtual bool isShareLocked() = 0;
 
-	/// \brief Enable or disable the computer sound when sharing, if virtual speaker is enabled, don't support share audio.
-    /// \param enable True indicates to enable. False disable.
+	/// \brief Enable or disable the computer sound when sharing. The SDK does not support sharing device audio, for example, when you've enabled virtual speaker.
+    /// \param enable True to enable. False to disable.
     /// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
-    ///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
+    ///Otherwise the function fails. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
 	virtual ZoomVideoSDKErrors enableShareDeviceAudio(bool enable) = 0;
 	
-	/// \brief Determine if share computer sound is enabled.
-    /// \return True if enabled. Otherwise returns false.
+	/// \brief Determine if the SDK has enabled share device sound. This reflects the execution status of `enableShareDeviceAudio` instead of `startShareComputerAudio`.
+    /// \return True if enabled, otherwise false.
     virtual bool isShareDeviceAudioEnabled() = 0;
 
 	/// \brief Enable or disable the optimization of frame rate, you can enable it when there is video in shared content.
@@ -161,6 +162,31 @@ public:
 	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
 	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
     virtual ZoomVideoSDKErrors startSharingExternalSource(IZoomVideoSDKShareSource* pSource) = 0;
+
+	/// \brief Whether annotation is enabled or not.
+	/// \return true support, false not support.
+	virtual bool isAnnotationFeatureSupport() = 0;
+
+	/// \brief Disable or enable viewer's annotation by the share owner.
+	/// \param bDisable true means annotation is disabled, false means it is enabled.
+	/// \warning Only the share owner can call this function.
+	virtual ZoomVideoSDKErrors disableViewerAnnotation(bool bDisable) = 0;
+
+	/// \brief Whether annotation on current sharing is disabled or not.
+	/// \return true disable, false not disable.
+	/// \warning Only the share owner can call this function.
+	virtual bool isViewerAnnotationDisabled() = 0;
+
+	/// \brief Creates annotation helper based on shared view.
+	/// \param handle the shared view handle. Pass the null will return the helper for self sharing.
+	/// \return If the function succeeds, the return value is the IZoomVideoSDKAnnotationHelper helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKAnnotationHelper \endlink.
+	/// \warning The view passed in this function should be subscribed share view. And if the share view aspect mode is full fill, the annotate not supported.
+	/// \When the share owner not support the feature of annotate, the others should not do annotate in that case.
+	virtual IZoomVideoSDKAnnotationHelper* createAnnotationHelper(void* handle) = 0;
+
+	/// \brief Destroys annotation helper.
+	/// \param helper IZoomVideoSDKAnnotationHelper object.
+	virtual ZoomVideoSDKErrors destroyAnnotationHelper(IZoomVideoSDKAnnotationHelper* helper) = 0;
 };
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif
