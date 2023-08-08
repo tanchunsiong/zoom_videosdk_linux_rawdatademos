@@ -237,6 +237,19 @@ public:
 	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
 	virtual ZoomVideoSDKErrors stopVideoPreview(IZoomVideoSDKRawDataPipeDelegate* listener) = 0;
 
+	/// \brief Starts the preview video.
+	/// \param handle The window handle of the preview video.
+	/// \param deviceID Specify a camera device to test. If the param is an incorrect camera ID, the SDK returns an error. Otherwise the SDK tests the specified device and sets it to be the selected one.
+	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise, this function returns an error. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.	
+	virtual ZoomVideoSDKErrors startVideoCanvasPreview(void* handle, const zchar_t* cameraDeviceID = NULL) = 0;
+
+	/// \brief Stops the preview video.
+	/// \param handle The window handle of the preview video.
+	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise, this function returns an error. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.	
+	virtual ZoomVideoSDKErrors stopVideoCanvasPreview(void* handle) = 0;
+
 #if !defined (__linux)
 	/// \brief Add virtual background object.
 	/// \param image_path Setting using image path.
@@ -278,6 +291,16 @@ public:
 	/// \return True if successful, otherwise false
 	/// Remark: If session is using video source and data_mode is not VideoSourceDataMode_None, default always use original aspect ration of video.
 	virtual bool enableOriginalAspectRatio(bool bEnabled) = 0;
+
+	/// \\brief Mirrors the current user's video. Valid only for canvas.
+	/// \\param bEnable TRUE to enable mirror my video.
+	/// \\return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise, this function returns an error. To get extended error information, see \\link ZoomVideoSDKErrors \\endlink enum.
+	virtual ZoomVideoSDKErrors mirrorMyVideo(bool bEnabled) = 0;
+
+	/// \\brief Determine whether mirror my video is enabled.
+	/// \\return True if mirror my video is enabled, otherwise false.
+	virtual bool isMyVideoMirrored() = 0;
 };
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif

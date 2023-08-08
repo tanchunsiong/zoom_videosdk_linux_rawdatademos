@@ -75,10 +75,8 @@ typedef enum
 	ZoomVideoSDKResolution_180P,
 	ZoomVideoSDKResolution_360P,
 	ZoomVideoSDKResolution_720P,
-#if (defined _WIN32) || (defined __MACOS__) || (defined __LINUX__)
 	ZoomVideoSDKResolution_1080P,
-#endif
-	ZoomVideoSDKResolution_NoUse = 100,
+	ZoomVideoSDKResolution_Auto = 100, ///<Just for video canvas.
 }ZoomVideoSDKResolution;
 
 typedef enum 
@@ -220,154 +218,72 @@ public:
 	virtual ZoomVideoSDKErrors zoomOut(unsigned int range = 50) = 0;
 };
 
-/**
- * @brief Enumerations of the type for live transcription status.
- */
 typedef enum
 {
-	ZoomVideoSDKLiveTranscription_Status_Stop = 0,///<not start
-	ZoomVideoSDKLiveTranscription_Status_Start = 1,  ///<start	
-}ZoomVideoSDKLiveTranscriptionStatus;
+	ZoomVideoSDKVideoAspect_Original, ///<Original aspect ratio.
+	ZoomVideoSDKVideoAspect_Full_Filled, ///<Full filled aspect ratio.
+	ZoomVideoSDKVideoAspect_LetterBox, ///<Letterbox aspect ratio.
+	ZoomVideoSDKVideoAspect_PanAndScan, ///<Pan and scan aspect ratio.
+}ZoomVideoSDKVideoAspect;
 
-/**
- * @brief Enumerations of the type for live transcription operation type.
- */
 typedef enum
 {
-	ZoomVideoSDKLiveTranscription_OperationType_None = 0,
-	ZoomVideoSDKLiveTranscription_OperationType_Add,
-	ZoomVideoSDKLiveTranscription_OperationType_Update,
-	ZoomVideoSDKLiveTranscription_OperationType_Delete,
-	ZoomVideoSDKLiveTranscription_OperationType_Complete,	
-	ZoomVideoSDKLiveTranscription_OperationType_NotSupported,
-	ZoomVideoSDKLiveTranscription_OperationType_NoTranslation,
-}ZoomVideoSDKLiveTranscriptionOperationType;
+	ZoomVideoSDKSubscribeFailReason_None = 0,
+	ZoomVideoSDKSubscribeFailReason_HasSubscribe1080POr720P,
+	ZoomVideoSDKSubscribeFailReason_HasSubscribeTwo720P,
+	ZoomVideoSDKSubscribeFailReason_HasSubscribeExceededLimit,
+	ZoomVideoSDKSubscribeFailReason_HasSubscribeTwoShare,
+	ZoomVideoSDKSubscribeFailReason_HasSubscribeVideo1080POr720PAndOneShare
+}ZoomVideoSDKSubscribeFailReason;
 
-/// \brief live transcription language interface.
+typedef enum
+{	
+	ZoomVideoSDKCanvasType_VideoData = 1, ///<Video camera data
+	ZoomVideoSDKCanvasType_ShareData, ///<Share data
+}ZoomVideoSDKCanvasType;
+
+#if !defined __LINUX__
+/// \brief video or share canvas interface.
 ///
-class ILiveTranscriptionLanguage
+class IZoomVideoSDKCanvas
 {
 public:
-	/// \brief Get id of the language.
-	/// \return The id of the language.
-	virtual int getLTTLanguageID() = 0;
+	virtual ~IZoomVideoSDKCanvas() {}
 
-	/// \brief Get name of the language.
-	/// \return The name of the language.
-	virtual const zchar_t* getLTTLanguageName() = 0;
-
-	virtual ~ILiveTranscriptionLanguage() {};
-};
-
-/// \brief live transcription message interface.
-///
-class ILiveTranscriptionMessageInfo
-{
-public:
-	/// \brief Get the message ID of the current message.
-	/// \return If the function succeeds, the return value is the message ID of the current message.
-	///Otherwise it fails, and the return value is the string of length zero(0)
-	virtual const zchar_t* getMessageID() = 0;
-
-	/// \brief Get the speaker's ID.
-	/// \return The user object's speaker ID.
-	virtual const zchar_t* getSpeakerID() = 0;
-
-	/// \brief Get the speaker's name.
-	/// \return The user object's speaker name.
-	virtual const zchar_t* getSpeakerName() = 0;
-
-	/// \brief Get the content of the current message.
-	/// \return The current message's content.
-	virtual const zchar_t* getMessageContent() = 0;
-
-	/// \brief Get the timestamp of the current message.
-	/// \return The current message's timestamp.
-	virtual time_t getTimeStamp() = 0;
-
-	/// \brief Get the type of the current message.
-	/// \return The current message's type.
-	virtual ZoomVideoSDKLiveTranscriptionOperationType getMessageType() = 0;
-
-	virtual ~ILiveTranscriptionMessageInfo() {};
-};
-
-/// \brief live transcription helper interface.
-class IZoomVideoSDKLiveTranscriptionHelper
-{
-public:
-	/// \brief Query if the user can start live transcription.
-	/// \return True if the user can start live transcription, otherwise false.
-	virtual bool canStartLiveTranscription() = 0;
-
-	/// \brief Get the current live transcription status.
-	/// \param [out] status The current live transcription status. For more details, see \link ZoomVideoSDKLiveTranscriptionStatus \endlink.
+	/// \brief Subscribes to the user's video or share view.
+	/// \param handle The window handle of the showing video or share content.
+	/// \param aspect Specify a video or share aspect ratio.
+	/// \param resolution Specify a video resolution, valid only for video canvas.
 	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
-	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
-	virtual ZoomVideoSDKErrors getLiveTranscriptionStatus(ZoomVideoSDKLiveTranscriptionStatus& status) = 0;
+	///Otherwise, this function returns an error. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.	
+	virtual ZoomVideoSDKErrors subscribeWithView(void* handle, ZoomVideoSDKVideoAspect videoAspect, ZoomVideoSDKResolution resolution = ZoomVideoSDKResolution_Auto) = 0;
 
-	/// \brief Start live transcription.
-	/// \If the session allows multi-language transcription,all users can start live transcription.
-	/// \return If the function succeeds, the return value is SDKErr_Success.
-	/// Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
-	virtual ZoomVideoSDKErrors startLiveTranscription() = 0;
+	/// \brief Unsubscribes to the user's video or share view.
+	/// \param handle The window handle of the showing video or share content.
+	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise, this function returns an error. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
+	virtual ZoomVideoSDKErrors unSubscribeWithView(void* handle) = 0;
 
-	/// \brief Stop live transcription.
-	/// \If the session allows multi-language transcription,all users can stop live transcription.
-	/// \return If the function succeeds, the return value is SDKErr_Success.
-	/// Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
-	virtual ZoomVideoSDKErrors stopLiveTranscription() = 0;
+	/// \brief Set the render video or share aspect ratio.
+	/// \param handle The window handle of the showing video or share content.
+	/// \param aspect Specify a new video aspect ratio.
+	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors_Success.
+	///Otherwise, this function returns an error. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.	
+	virtual ZoomVideoSDKErrors setAspectMode(void* handle, ZoomVideoSDKVideoAspect aspect) = 0;
 
-	/// \brief Get the list of all available spoken languages in session.
-	/// \return If the function succeeds, the return value is the list of the available spoken languages in a session.
-	///Otherwise failed, the return value is NULL.	
-	virtual IVideoSDKVector<ILiveTranscriptionLanguage*>* getAvailableSpokenLanguages() = 0;
-
-	/// \brief Set the spoken language of the current user.
-	/// \param languageID The spoken language ID.
-	/// \return If the function succeeds, the return value is SDKErr_Success.
-	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
-	virtual ZoomVideoSDKErrors setSpokenLanguage(int languageID) = 0;
-
-	/// \brief Get the spoken language of the current user.
-	/// \return The spoken language of the current user.
-	virtual ILiveTranscriptionLanguage* getSpokenLanguage() = 0;
-
-	/// \brief Get the list of all available translation languages in a session.
-	/// \return If the function succeeds, the return value is the list of all available translation languages in a session.
-	///Otherwise failed, the return value is NULL.
-	virtual IVideoSDKVector<ILiveTranscriptionLanguage*>* getAvailableTranslationLanguages() = 0;
-
-	/// \brief Set the translation language of the current user.	
-	/// \param languageID The translation language ID.
-	/// If the language id is set to -1, live translation will be disabled.
-	/// \return If the function succeeds, the return value is SDKErr_Success.
-	///Otherwise failed. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
-	virtual ZoomVideoSDKErrors setTranslationLanguage(int languageID) = 0;
-
-	/// \brief Get the translation language of the current user.
-	/// \return The translation language of the current user.
-	virtual ILiveTranscriptionLanguage* getTranslationLanguage() = 0;
-
-	/// \brief Enable or disable to receive original and translated content.If you enable this feature,you must start live transcription.
-	/// \param bEnable True to enable the temporal de-noise of video or false to disable it.
+	/// \brief Sets the resolution for the user's video. Once you specify the value, the resolution will not change even if the size of the window is changed.
+	///Specifying a bigger resolution may cause a subscription failure.
+	/// \param handle The window handle of the showing video.
+	/// \param resolution Specify the resolution for the video in the current render.
 	/// \return If the function succeeds, the return value is ZoomVideoSDKErrors.
-	/// Otherwise it fails. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
-	virtual ZoomVideoSDKErrors enableReceiveSpokenLanguageContent(bool bEnable) = 0;
+	///Otherwise, this function returns an error. To get extended error information, see \link ZoomVideoSDKErrors \endlink enum.
+	virtual ZoomVideoSDKErrors setResolution(void* handle, ZoomVideoSDKResolution resolution) = 0;
 
-	/// \brief Determine whether the feature to receive original and translated is available.
-	/// \return True indicates that the feature to receive original and translated is available. Otherwise False.
-	virtual bool isReceiveSpokenLanguageContentEnabled() = 0;
-
-	/// \brief Determine whether the view history translation message is available.
-	/// \return True indicates that the view history transcription message is available. Otherwise False.
-	virtual bool isAllowViewHistoryTranslationMessageEnabled() = 0;
-
-	/// \brief Get the list of all history translation messages in a session.
-	/// \return If the function succeeds, the return value is a list of all history translation messages in a session.
-	///Otherwise it fails, and the return value is NULL.
-	virtual IVideoSDKVector<ILiveTranscriptionMessageInfo*>* getHistoryTranslationMessageList() = 0;
+	/// \brief Gets the canvas type. 
+	/// \return Share or Video canvas type, see \link ZoomVideoSDKCanvasType \endlink enum.
+	virtual ZoomVideoSDKCanvasType canvasType() = 0;
 };
+#endif //__LINUX__
 
 /// \brief User object interface.
 ///
@@ -426,6 +342,16 @@ public:
 	/// \return The share pipe. For more information, see \link IZoomVideoSDKRawDataPipe \endlink
 	virtual IZoomVideoSDKRawDataPipe* GetSharePipe() = 0;
 
+#if !defined __LINUX__
+	/// \brief Gets the user's video render canvas object.
+	/// \return If the function succeeds, the return value is the video render helper object. Otherwise, this function fails and returns NULL. For more details, see \link IZoomVideoSDKCanvas \endlink.
+	virtual IZoomVideoSDKCanvas* GetVideoCanvas() = 0;
+
+	/// \brief Get the user's share render canvas object.
+	/// \return If the function succeeds, the return value is the share render helper object. Otherwise, this function fails and returns NULL. For more details, see \link IZoomVideoSDKCanvas \endlink.
+	virtual IZoomVideoSDKCanvas* GetShareCanvas() = 0;
+#endif
+	
 	/// \brief Get the helper class instance to access the remote camera control.
 	/// \return If the function succeeds, the return value is the remote camera control helper object.
 	///Otherwise returns NULL. For more details, see \link IZoomVideoSDKRemoteCameraControlHelper \endlink.
@@ -434,10 +360,6 @@ public:
 	/// \brief Get the user's multi-camera stream list.
 	/// \return A list of all streaming cameras pipe. For more information, see see \link IZoomVideoSDKRawDataPipe \endlink.
 	virtual IVideoSDKVector<IZoomVideoSDKRawDataPipe*>* getMultiCameraStreamList() = 0;
-
-	/// \brief Get the user's live transcription helper object.
-	/// \return If the function succeeds, the return value is the live transcription helper object. Otherwise returns NULL. For more details, see \link IZoomVideoSDKLiveTranscriptionHelper \endlink.
-	virtual IZoomVideoSDKLiveTranscriptionHelper* getLiveTranscriptionHelper() = 0;
 
 	/// \brief Set the user's local volume. This does not affect how other participants hear the user.
 	/// \param volume The value can be >= 0 and <=10. If volume is 0, you won't be able to hear the related audio.

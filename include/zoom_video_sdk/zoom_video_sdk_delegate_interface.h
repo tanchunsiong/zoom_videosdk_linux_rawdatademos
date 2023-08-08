@@ -16,6 +16,7 @@
 #include "helpers/zoom_video_sdk_audio_helper_interface.h"
 #include "helpers/zoom_video_sdk_share_helper_interface.h"
 #include "helpers/zoom_video_sdk_livestream_helper_interface.h"
+#include "helpers/zoom_video_sdk_livetranscription_helper_interface.h"
 #include "helpers/zoom_video_sdk_chat_helper_interface.h"
 #include "helpers/zoom_video_sdk_network_connection_helper_interface.h"
 #include "helpers/zoom_video_sdk_crc_helper_interface.h"
@@ -195,6 +196,10 @@ public:
 	/// \deprecated This interface will be marked as deprecated, then it will be instead by onLiveTranscriptionMsgInfoReceived, please stop using it.
 	virtual void onLiveTranscriptionMsgReceived(const zchar_t* ltMsg, IZoomVideoSDKUser* pUser, ZoomVideoSDKLiveTranscriptionOperationType type) = 0;
 
+	/// \brief Original language message received callback.
+	/// \param messageInfo The spoken language message, see \link ILiveTranscriptionMessageInfo \endlink.	
+	virtual void onOriginalLanguageMsgReceived(ILiveTranscriptionMessageInfo* messageInfo) = 0;
+
 	/// \brief Invoked when a live transcription message is received.	
 	/// \param messageInfo The live transcription message, see \link ILiveTranscriptionMessageInfo \endlink. 	
 	virtual void onLiveTranscriptionMsgInfoReceived(ILiveTranscriptionMessageInfo* messageInfo) = 0;
@@ -209,6 +214,11 @@ public:
 	/// \param MsgID The deleted message's ID.
 	/// \param deleteBy Indicates by whom the message was deleted.
 	virtual void onChatMsgDeleteNotification(IZoomVideoSDKChatHelper* pChatHelper, const zchar_t* msgID, ZoomVideoSDKChatMessageDeleteType deleteBy) = 0;
+
+	/// \brief Callback event of the chat privilege of participant has changed.
+	/// \param pChatHelper The pointer to chat helper object, see \link IZoomVideoSDKChatHelper \endlink.
+	/// \param privilege The new chat privilege. For more details, see \link ZoomVideoSDKChatPrivilegeType \endlink enum.
+	virtual void onChatPrivilegeChanged(IZoomVideoSDKChatHelper* pChatHelper, ZoomVideoSDKChatPrivilegeType privilege) = 0;
 
 	/// \brief Notification callback of completing the proxy detection.
 	virtual void onProxyDetectComplete() = 0;
@@ -228,8 +238,32 @@ public:
 	virtual void onUserVideoNetworkStatusChanged(ZoomVideoSDKNetworkStatus status, IZoomVideoSDKUser* pUser) = 0;
 
 	/// \brief Callback event of the call CRC device's status.
-	/// \param status The call status. For more details, see \link ZoomVideoSDKCRCCallStatus \endlink enum.
+	/// \param status The call status.. For more details, see \link ZoomVideoSDKCRCCallStatus \endlink enum.
 	virtual void onCallCRCDeviceStatusChanged(ZoomVideoSDKCRCCallStatus status) = 0;
+
+#if !defined __LINUX__
+	/// \brief Callback event for the subscribed user's video failure reason.
+	/// \param fail_reason The user's video subscribe failure reason. For more details, see \link ZoomVideoSDKSubscribeFailReason \endlink enum.
+	/// \param pUser The pointer to a user object, see \link IZoomVideoSDKUser \endlink.  
+	/// \param handle The window handle that failed to subscribe.
+	virtual void onVideoCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle) = 0;
+
+	/// \brief Callback event for the subscribed user's share view failure reason.
+	/// \param fail_reason The user's share view subscribe failure reason. For more details, see \link ZoomVideoSDKSubscribeFailReason \endlink enum.
+	/// \param pUser The pointer to a user object, see \link IZoomVideoSDKUser \endlink.  
+	/// \param handle The window handle that failed to subscribe.
+	virtual void onShareCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle) = 0;
+#endif
+
+	/// \brief Callback for the annotation helper clean up.
+	/// \param helper The clean up object, see \link IZoomVideoSDKAnnotationHelper \endlink enum.
+	/// \After this callback, SDK will release the ZoomVideoSDKAnnotationHelper as well.	
+	virtual void onAnnotationHelperCleanUp(IZoomVideoSDKAnnotationHelper* helper) = 0;
+
+	/// \brief Callback for the annotation privilege change.
+	/// \enable true means the user is able to annotate,false means the user is not able to annotate.
+	/// \param pUser The pointer to a user object, see \link IZoomVideoSDKUser \endlink.  
+	virtual void onAnnotationPrivilegeChange(IZoomVideoSDKUser* pUser, bool enable) = 0;
 };
 END_ZOOM_VIDEO_SDK_NAMESPACE
 #endif
