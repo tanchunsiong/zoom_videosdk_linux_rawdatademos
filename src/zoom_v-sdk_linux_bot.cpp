@@ -60,7 +60,10 @@
     bool enableCloudRecording = false;
     bool enableCallOut = false;
     bool enableLTT = true; //bug
+<<<<<<< HEAD
     bool enableStatistics = true; //bug
+=======
+>>>>>>> 7f220d44a1815fd9ae5ed5990ea792e6e303fe73
 
     std::string getSelfDirPath()
     {
@@ -220,6 +223,7 @@
                 }
                 
             }
+<<<<<<< HEAD
             if (enableStatistics){
                 IZoomVideoSDKSession* m_sessionhelper = video_sdk_obj->getSessionInfo();
                 
@@ -280,6 +284,8 @@
                     recvInfo.packetLossMax; 
 
             }
+=======
+>>>>>>> 7f220d44a1815fd9ae5ed5990ea792e6e303fe73
 
             
     }
@@ -652,11 +658,24 @@
                 printf("data %s \n",  data_->GetBuffer());
         };
 
+<<<<<<< HEAD
     virtual void onOriginalLanguageMsgReceived(ILiveTranscriptionMessageInfo* messageInfo){};
     virtual void onChatPrivilegeChanged(IZoomVideoSDKChatHelper* pChatHelper, ZoomVideoSDKChatPrivilegeType privilege){};
     virtual void onVideoCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle){};
     virtual void onShareCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle){};
     virtual void onAnnotationHelperCleanUp(IZoomVideoSDKAnnotationHelper* helper) {};
+=======
+  virtual void onOriginalLanguageMsgReceived(ILiveTranscriptionMessageInfo* messageInfo){};
+ 
+ virtual void onChatPrivilegeChanged(IZoomVideoSDKChatHelper* pChatHelper, ZoomVideoSDKChatPrivilegeType privilege){};
+   
+  virtual void onVideoCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle){};
+
+  virtual void onShareCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle){};
+
+    virtual void onAnnotationHelperCleanUp(IZoomVideoSDKAnnotationHelper* helper) {};
+
+>>>>>>> 7f220d44a1815fd9ae5ed5990ea792e6e303fe73
     virtual void onAnnotationPrivilegeChange(IZoomVideoSDKUser* pUser, bool enable) {};
 
     };
