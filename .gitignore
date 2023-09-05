@@ -7,3 +7,8 @@ lib/ffmpeg
 #lib/zoom_video_sdk
 lib/zoom_video_sdk/qt_libs
 #config.json
+
+
+#for visual studio 2022
+.vs
+CMakeSettings.json
