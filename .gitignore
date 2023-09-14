@@ -24,4 +24,3 @@ config.json
 /include/zoom_video_sdk/helpers
 /include/zoom_video_sdk/*.h
 
-/lib/zoom_video_sdk/libmpg123.so
