@@ -8,6 +8,7 @@ lib/ffmpeg
 lib/zoom_video_sdk/qt_libs
 #config.json
 
+out/
 
 #for visual studio 2022
 .vs
