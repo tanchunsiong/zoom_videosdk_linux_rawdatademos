@@ -4,8 +4,12 @@ build/
 !.vscode/c_cpp_properties.json
 *.mkv
 lib/ffmpeg
-#lib/zoom_video_sdk
-lib/zoom_video_sdk/qt_libs
+lib/zoom_video_sdk/qt_libs/Qt
+lib/zoom_video_sdk/libfdaac2.so
+lib/zoom_video_sdk/libmpg123.so
+lib/zoom_video_sdk/libturbojpeg.so
+lib/zoom_video_sdk/libvideosdk.so
+lib/zoom_video_sdk/libvideosdk.so.1
 #config.json
 
 out/
@@ -14,4 +18,8 @@ out/
 .vs
 CMakeSettings.json
 
-/config.json
+config.json
+
+include/ffmpeg
+include/zoom_video_sdk/helpers
+include/zoom_video_sdk/*.h
