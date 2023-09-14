@@ -21,7 +21,13 @@ include_directories(${CMAKE_SOURCE_DIR}/include/ffmpeg)
 link_directories(${CMAKE_SOURCE_DIR}/lib/zoom_video_sdk)
 link_directories(${CMAKE_SOURCE_DIR}/lib/ffmpeg)
 
-add_executable(zoom_v-sdk_linux_bot ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKRawDataPipeDelegate.cpp  ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKVirtualAudioMic.cpp ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKVirtualAudioSpeaker.cpp ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKShareSource.cpp  ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKVideoSource.cpp ${CMAKE_SOURCE_DIR}/src/zoom_v-sdk_linux_bot.cpp )
+add_executable(zoom_v-sdk_linux_bot ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKRawDataPipeDelegate.cpp  
+                                ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKVirtualAudioMic.cpp 
+                                ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKVirtualAudioSpeaker.cpp 
+                                 ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKShareSource.cpp 
+                                 ${CMAKE_SOURCE_DIR}/src/ZoomVideoSDKVideoSource.cpp 
+                                 ${CMAKE_SOURCE_DIR}/src/zoom_v-sdk_linux_bot.cpp  
+                                 ${CMAKE_SOURCE_DIR}/src/WebService.cpp)
 
 target_link_libraries(zoom_v-sdk_linux_bot PkgConfig::deps)
 target_link_libraries(zoom_v-sdk_linux_bot videosdk)
@@ -29,6 +35,7 @@ target_link_libraries(zoom_v-sdk_linux_bot z pthread avformat)
 target_link_libraries(zoom_v-sdk_linux_bot z lzma swresample avcodec)
 target_link_libraries(zoom_v-sdk_linux_bot avutil)
 target_link_libraries(zoom_v-sdk_linux_bot swscale avfilter)
+target_link_libraries(zoom_v-sdk_linux_bot curl)
 
 configure_file(${CMAKE_SOURCE_DIR}/config.json ${CMAKE_SOURCE_DIR}/bin/config.json COPYONLY)
 file(COPY ${CMAKE_SOURCE_DIR}/lib/zoom_video_sdk/ DESTINATION ${CMAKE_SOURCE_DIR}/bin)

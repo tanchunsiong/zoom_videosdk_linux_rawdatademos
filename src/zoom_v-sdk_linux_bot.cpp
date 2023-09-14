@@ -41,6 +41,7 @@
 
 //needed for LTT
 #include "zoom_video_sdk_session_info_interface.h"
+#include "WebService.h"
 
 using Json = nlohmann::json;
 USING_ZOOM_VIDEO_SDK_NAMESPACE
@@ -61,6 +62,9 @@ bool enableCloudRecording = false;
 bool enableCallOut = false;
 bool enableLTT = false; //bug
 bool enableStatistics = false; //bug
+
+
+bool getSignatureFromWebService = true;
 
 std::string getSelfDirPath()
 {
@@ -820,6 +824,12 @@ int main(int argc, char* argv[])
 	if (session_name.size() == 0 || session_token.size() == 0)
 	{
 		return 0;
+	}
+
+	if (getSignatureFromWebService) {
+		session_token = GetSignatureFromWebService("https://asdc.cc/video", session_name,"1");
+		printf("JWT from webservice is %s\n", session_token.c_str());
+	
 	}
 
 	printf("begin to join: %s\n", self_dir.c_str());
