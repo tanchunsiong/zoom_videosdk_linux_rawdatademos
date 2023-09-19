@@ -18,7 +18,8 @@ out/
 .vs
 CMakeSettings.json
 
-config.json
+#config.json
+#config.json
 
 /include/ffmpeg
 /include/zoom_video_sdk/helpers
