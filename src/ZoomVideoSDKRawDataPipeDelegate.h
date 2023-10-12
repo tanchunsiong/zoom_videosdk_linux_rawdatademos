@@ -16,7 +16,9 @@ extern "C"
 #include <chrono>
 using namespace std::chrono;
 
+
 // Zoom Video SDK
+
 #include "helpers/zoom_video_sdk_user_helper_interface.h"
 using namespace ZOOMVIDEOSDK;
 
@@ -46,8 +48,8 @@ class ZoomVideoSDKRawDataPipeDelegate :
 	unsigned char* frame_buffer_out;
 	int in_width = 0;
 	int in_height = 0;
-	int out_width = 640;
-	int out_height = 480;
+	int out_width = 1280;
+	int out_height = 720;
 
 	AVFilterContext* buffersink_ctx;
 	AVFilterContext* buffersrc_ctx;

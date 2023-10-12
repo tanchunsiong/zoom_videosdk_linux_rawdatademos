@@ -94,6 +94,7 @@ void ZoomVideoSDKRawDataPipeDelegate::onRawDataFrameReceived(YUVRawDataI420 *dat
 		in_width = width;
 		in_height = height;
 		ffmpeg_start(userName, userID, sourceID);
+		//printf("sourceIdNotReady: width * height is % d * %d.\n", width, height);
 		is_ffmpeg_encoding_on = 1;
 	}
 	else
@@ -106,7 +107,7 @@ void ZoomVideoSDKRawDataPipeDelegate::onRawDataFrameReceived(YUVRawDataI420 *dat
 			in_height = height;
 			// the video source reslution changed, update the ffmpeg filter for scale.
 			ffmpeg_filter_init();
-
+			//printf("w!=w: width * height is %d * %d.\n", width, height);
 			is_ffmpeg_encoding_on = 1;
 		}
 	}
@@ -116,6 +117,7 @@ void ZoomVideoSDKRawDataPipeDelegate::onRawDataFrameReceived(YUVRawDataI420 *dat
 			reinterpret_cast<unsigned char *>(data->GetYBuffer()),
 			reinterpret_cast<unsigned char *>(data->GetUBuffer()),
 			reinterpret_cast<unsigned char *>(data->GetVBuffer()));
+		//printf("width * height is %d * %d.\n",width,height);
 		ffmpeg_encode();
 	}
 }

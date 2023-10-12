@@ -49,8 +49,8 @@ IZoomVideoSDK* video_sdk_obj;
 GMainLoop* loop;
 
 //these are controls to demonstrate the flow
-bool getRawAudio = true;
-bool getRawVideo = false;
+bool getRawAudio = false;
+bool getRawVideo = true;
 bool getRawShare = false;
 bool sendRawVideo = false;
 bool sendRawAudio = false;

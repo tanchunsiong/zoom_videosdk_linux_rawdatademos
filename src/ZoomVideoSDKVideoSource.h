@@ -1,6 +1,8 @@
 // Zoom Video SDK
-#include "helpers/zoom_video_sdk_video_source_helper_interface.h"
+#include "zoom_sdk_raw_data_def.h"
 #include "zoom_video_sdk_def.h"
+#include "helpers/zoom_video_sdk_video_source_helper_interface.h"
+
 using namespace ZOOMVIDEOSDK;
 
 //needed for audio, applies to this entire .h file
