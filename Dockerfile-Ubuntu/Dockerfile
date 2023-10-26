@@ -21,7 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends --no-install-su
     libxcb-keysyms1 \
     libxcb-xtest0 
 
-    # these are copied from msdk, not sure if needed
+# these are copied from msdk, not sure if needed
+
 # RUN apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
     #libdbus-1-3 \
     #libglib2.0-0 \
