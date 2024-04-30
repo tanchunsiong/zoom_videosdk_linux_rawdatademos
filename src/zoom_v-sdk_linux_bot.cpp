@@ -49,7 +49,7 @@ IZoomVideoSDK* video_sdk_obj;
 GMainLoop* loop;
 
 //these are controls to demonstrate the flow
-bool getRawAudio = false;
+bool getRawAudio = true;
 bool getRawVideo = true;
 bool getRawShare = false;
 bool sendRawVideo = false;
@@ -81,7 +81,8 @@ std::string getSelfDirPath()
 	return std::string(dest);
 }
 
-class ZoomVideoSDKDelegate : public IZoomVideoSDKDelegate
+class ZoomVideoSDKDelegate : 
+	public IZoomVideoSDKDelegate
 {
 public:
 	/// \brief Triggered when user enter the session.
@@ -170,6 +171,7 @@ public:
 			ZoomVideoSDKErrors err = m_pRecordhelper->canStartRecording();
 			if (err == ZoomVideoSDKErrors_Success) {
 				ZoomVideoSDKErrors err2 = m_pRecordhelper->startCloudRecording();
+			
 
 				if (err2 != ZoomVideoSDKErrors_Success) {
 
@@ -527,9 +529,9 @@ public:
 			if (data_) {
 				savePcmBufferToFile(filename, data_->GetBuffer(), data_->GetBufferLen());
 				printf("Data buffer: %s\n", data_->GetBuffer());
-				printf("Length is : %d\n", data_->GetBufferLen());
-				printf("Sample is : %d\n", data_->GetSampleRate());
-				printf("Channel is : %d\n", data_->GetChannelNum());
+				//printf("Length is : %d\n", data_->GetBufferLen());
+				//printf("Sample is : %d\n", data_->GetSampleRate());
+				//printf("Channel is : %d\n", data_->GetChannelNum());
 			}
 
 		}
@@ -583,6 +585,8 @@ public:
 
 	};
 	virtual void onInviteByPhoneStatus(PhoneStatus status, PhoneFailedReason reason) {};
+	virtual void onCalloutJoinSuccess(IZoomVideoSDKUser* pUser, const zchar_t* phoneNumber) {};
+
 	virtual void onCloudRecordingStatus(RecordingStatus status, IZoomVideoSDKRecordingConsentHandler* pHandler) {
 		if (enableCloudRecording) {
 
@@ -598,7 +602,7 @@ public:
 	virtual void onAudioDeviceStatusChanged(ZoomVideoSDKAudioDeviceType type, ZoomVideoSDKAudioDeviceStatus status) {}
 	virtual void onTestMicStatusChanged(ZoomVideoSDK_TESTMIC_STATUS status) {}
 	virtual void onSelectedAudioDeviceChanged() {}
-
+	virtual void onCameraListChanged() {}
 	virtual void onLiveTranscriptionStatus(ZoomVideoSDKLiveTranscriptionStatus status) {
 		if (enableLTT) {
 			printf("onLiveTranscriptionStatus() Status is : %d\n", status);
@@ -632,12 +636,7 @@ public:
 
 
 	};
-	virtual void onProxyDetectComplete() {};
-	virtual void onProxySettingNotification(IZoomVideoSDKProxySettingHandler* handler) {};
-	virtual void onSSLCertVerifiedFailNotification(IZoomVideoSDKSSLCertificateInfo* info) {};
-	virtual void onUserVideoNetworkStatusChanged(ZoomVideoSDKNetworkStatus status, IZoomVideoSDKUser* pUser) {};
 
-	virtual void onCallCRCDeviceStatusChanged(ZoomVideoSDKCRCCallStatus status) {};
 
 	virtual void onVirtualSpeakerMixedAudioReceived(AudioRawData* data_) {
 
@@ -661,6 +660,15 @@ public:
 	virtual void onChatPrivilegeChanged(IZoomVideoSDKChatHelper* pChatHelper, ZoomVideoSDKChatPrivilegeType privilege) {};
 	virtual void onSendFileStatus(IZoomVideoSDKSendFile* file, const FileTransferStatus& status) {};
 	virtual void onReceiveFileStatus(IZoomVideoSDKReceiveFile* file, const FileTransferStatus& status) {};
+
+
+	virtual void onProxyDetectComplete() {};
+	virtual void onProxySettingNotification(IZoomVideoSDKProxySettingHandler* handler) {};
+	virtual void onSSLCertVerifiedFailNotification(IZoomVideoSDKSSLCertificateInfo* info) {};
+
+	virtual void onUserVideoNetworkStatusChanged(ZoomVideoSDKNetworkStatus status, IZoomVideoSDKUser* pUser) {};
+	virtual void onCallCRCDeviceStatusChanged(ZoomVideoSDKCRCCallStatus status) {};
+
 
 	virtual void onVideoCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle) {};
 	virtual void onShareCanvasSubscribeFail(ZoomVideoSDKSubscribeFailReason fail_reason, IZoomVideoSDKUser* pUser, void* handle) {};
@@ -765,8 +773,21 @@ gboolean timeout_callback(gpointer data)
 void my_handler(int s)
 {
 	printf("\nCaught signal %d\n", s);
+	
+	printf("\Leaving Session\n");
 	video_sdk_obj->leaveSession(false);
-	printf("Leaving session.\n");
+	printf("\Left Session\n");
+	
+	printf("\Cleaning up SDK\n");
+	video_sdk_obj->cleanup();
+	printf("\Cleaned up SDK\n");
+
+	printf("\Destroying SDK Object\n");
+	DestroyZoomVideoSDKObj();
+	printf("\Destroyed SDK Object\n");
+
+
+
 }
 
 int main(int argc, char* argv[])

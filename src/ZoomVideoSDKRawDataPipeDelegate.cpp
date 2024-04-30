@@ -70,7 +70,7 @@ void ZoomVideoSDKRawDataPipeDelegate::stop_encoding_for(IZoomVideoSDKUser *user,
 		encoder->~ZoomVideoSDKRawDataPipeDelegate();
 	}
 }
-int j = 0;
+
 
 void ZoomVideoSDKRawDataPipeDelegate::onRawDataFrameReceived(YUVRawDataI420 *data)
 {

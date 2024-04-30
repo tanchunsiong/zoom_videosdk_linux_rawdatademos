@@ -20,6 +20,7 @@ using namespace std::chrono;
 // Zoom Video SDK
 
 #include "helpers/zoom_video_sdk_user_helper_interface.h"
+#include "helpers/zoom_video_sdk_user_helper_interface.h"
 using namespace ZOOMVIDEOSDK;
 
 class ZoomVideoSDKRawDataPipeDelegate :
@@ -91,7 +92,7 @@ public:
 	~ZoomVideoSDKRawDataPipeDelegate();
 
 	static void stop_encoding_for(IZoomVideoSDKUser* user);
-		static void stop_encoding_for(IZoomVideoSDKUser* user, bool isShareScreen);
+	static void stop_encoding_for(IZoomVideoSDKUser* user, bool isShareScreen);
 	static void log(const wchar_t* format, ...);
 	static void err_msg(int code);
 };
