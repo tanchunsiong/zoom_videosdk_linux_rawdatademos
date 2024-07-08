@@ -1,15 +1,15 @@
-bin/
-build/
-.vscode/
+*bin/
+*build/
+*vscode/
 !.vscode/c_cpp_properties.json
-*.mkv
-/lib/ffmpeg
-/lib/zoom_video_sdk/qt_libs/Qt/
-/lib/zoom_video_sdk/libfdkaac2.so
-/lib/zoom_video_sdk/libmpg123.so
-/lib/zoom_video_sdk/libturbojpeg.so
-/lib/zoom_video_sdk/libvideosdk.so
-/lib/zoom_video_sdk/libvideosdk.so.1
+*mkv
+*/lib/ffmpeg
+*/lib/zoom_video_sdk/qt_libs/Qt/
+*/lib/zoom_video_sdk/libfdkaac2.so
+*/lib/zoom_video_sdk/libmpg123.so
+*/lib/zoom_video_sdk/libturbojpeg.so
+*/lib/zoom_video_sdk/libvideosdk.so
+*/lib/zoom_video_sdk/libvideosdk.so.1
 #config.json
 
 out/
@@ -21,9 +21,10 @@ CMakeSettings.json
 #config.json
 #config.json
 
-/include/ffmpeg
-/include/zoom_video_sdk/helpers
-/include/zoom_video_sdk/*.h
+*/include/ffmpeg
+*/include/zoom_video_sdk/helpers
+*/include/zoom_video_sdk/*.h
 
-/lib/zoom_video_sdk/libvideosdk.so
-/lib/zoom_video_sdk/libvideosdk.so.1
+*/lib/zoom_video_sdk/libvideosdk.so
+*/lib/zoom_video_sdk/libvideosdk.so.1
+/AllInOneExample/src/include/ffmpeg
