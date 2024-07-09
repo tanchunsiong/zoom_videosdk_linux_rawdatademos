@@ -1,0 +1,1 @@
+std::string GetSignatureFromWebService(std::string remote_url, std::string session_name, std::string role);
