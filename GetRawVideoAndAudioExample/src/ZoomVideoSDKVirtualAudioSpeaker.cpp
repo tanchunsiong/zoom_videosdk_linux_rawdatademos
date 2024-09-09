@@ -6,16 +6,16 @@ using namespace ZOOMVIDEOSDK;
 
 void ZoomVideoSDKVirtualAudioSpeaker::onVirtualSpeakerMixedAudioReceived(AudioRawData* data_)
 {
-    // Handle mixed audio raw data here
-    // data_->GetBuffer();
-    // data_->GetBufferLen();
-    // data_->GetChannelNum();
-    // data_->GetSampleRate();
-    	 //printf("onVirtualSpeakerMixedAudioReceived() \n");
-         //	printf("data %s \n",  data_->GetBuffer());
-        //     printf("length %n \n",  data_->GetBufferLen());
-        //      printf("channel %n \n",  data_->GetChannelNum());
-        //       printf("sample %n \n",  data_->GetSampleRate());
+   // Handle mixed audio raw data here
+    data_->GetBuffer();
+    data_->GetBufferLen();
+    data_->GetChannelNum();
+    data_->GetSampleRate();
+    printf("onVirtualSpeakerMixedAudioReceived() \n");
+    printf("data %s \n",  data_->GetBuffer());
+    printf("length %n \n",  data_->GetBufferLen());
+    printf("channel %n \n",  data_->GetChannelNum());
+    printf("sample %n \n",  data_->GetSampleRate());
 }
 
 void ZoomVideoSDKVirtualAudioSpeaker::onVirtualSpeakerOneWayAudioReceived(AudioRawData* data_, IZoomVideoSDKUser* pUser)

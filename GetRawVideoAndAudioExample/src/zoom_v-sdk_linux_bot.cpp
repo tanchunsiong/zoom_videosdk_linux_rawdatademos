@@ -29,7 +29,7 @@
 #include "ZoomVideoSDKRawDataPipeDelegate.h"
 #include "helpers/zoom_video_sdk_video_helper_interface.h"
 
-//needed for command channel
+
 
 
 #include "WebService.h"
@@ -39,13 +39,21 @@ USING_ZOOM_VIDEO_SDK_NAMESPACE
 IZoomVideoSDK* video_sdk_obj;
 GMainLoop* loop;
 
+
+int counter = 0;
+
 //these are controls to demonstrate the flow
 bool getRawAudio = true;
-bool getRawVideo = true;
+bool getRawVideo = false;
 bool getRawShare = false;
 
 
 bool getSignatureFromWebService = true;
+
+
+std::string audioFile = "output.wav";
+
+
 
 std::string getSelfDirPath()
 {
@@ -202,18 +210,145 @@ public:
 		}
 	}
 
-	virtual void onMixedAudioRawDataReceived(AudioRawData* data_) {
+
+#include <iostream>
+
+#include "libavfilter/avfiltergraph.h"
+#include "libavfilter/buffersink.h"
+#include "libavfilter/buffersrc.h"
+#include "libavutil/avutil.h"
+#include "libavutil/imgutils.h"
+#include "libavutil/pixfmt.h"
+#include "libavformat/avformat.h"
+#include "libavformat/avio.h"
+#include "libavcodec/avcodec.h"
+
+// WAV header structure
+struct WavHeader {
+    char riff[4];                // "RIFF"
+    uint32_t overall_size;        // File size minus 8 bytes (4 bytes each for "RIFF" and file size fields)
+    char wave[4];                // "WAVE"
+    char fmt_chunk_marker[4];    // "fmt " chunk
+    uint32_t length_of_fmt;      // Length of the format data (usually 16 for PCM)
+    uint16_t format_type;        // Format type (1 for PCM)
+    uint16_t channels;           // Number of channels (1 for mono, 2 for stereo)
+    uint32_t sample_rate;        // Sample rate (e.g., 44100)
+    uint32_t byterate;           // Sample rate * Number of channels * Bits per sample / 8
+    uint16_t block_align;        // Number of channels * Bits per sample / 8
+    uint16_t bits_per_sample;    // Bits per sample (usually 16 for PCM)
+    char data_chunk_header[4];   // "data" chunk
+    uint32_t data_size;          // Size of the data section (number of samples * channels * bits per sample / 8)
+};
+
+// Helper function to read WAV header
+bool readWavHeader(std::ifstream &file, WavHeader &header) {
+    file.read(reinterpret_cast<char*>(&header), sizeof(WavHeader));
+    if (strncmp(header.riff, "RIFF", 4) != 0 || strncmp(header.wave, "WAVE", 4) != 0) {
+        std::cerr << "Invalid WAV file format.\n";
+        return false;
+    }
+    return true;
+}
+
+// Helper function to write WAV header
+void writeWavHeader(std::ofstream &file, const WavHeader &header) {
+    file.write(reinterpret_cast<const char*>(&header), sizeof(WavHeader));
+}
+
+
+// Function to append or create a WAV file with PCM data
+// Function to append or create a WAV file with PCM data
+void convertPcmBufferToWav(const char* wavFile, uint8_t* pcmBuffer, int bufferSize, int sampleRate, int channels) {
+    WavHeader header;
+    bool isNewFile = false;
+
+    // Check if the file exists using fopen, a more reliable way to check file existence
+    FILE *fileCheck = std::fopen(wavFile, "r");
+    if (!fileCheck) {
+        // If the file does not exist, create a new WAV header
+        //std::cerr << "File does not exist, creating a new WAV file.\n";
+        isNewFile = true;
+        std::memset(&header, 0, sizeof(WavHeader));
+        std::memcpy(header.riff, "RIFF", 4);
+        std::memcpy(header.wave, "WAVE", 4);
+        std::memcpy(header.fmt_chunk_marker, "fmt ", 4);
+        header.length_of_fmt = 16;
+        header.format_type = 1;  // PCM format
+        header.channels = channels;
+        header.sample_rate = sampleRate;
+        header.bits_per_sample = 16;  // Assuming 16-bit PCM
+        header.byterate = sampleRate * channels * header.bits_per_sample / 8;
+        header.block_align = channels * header.bits_per_sample / 8;
+        std::memcpy(header.data_chunk_header, "data", 4);
+        header.data_size = 0;
+        header.overall_size = 36 + header.data_size;  // 36 is the size of the rest of the header
+    } else {
+        // If the file exists, read the existing header
+        std::fclose(fileCheck);  // Close file check
+        std::ifstream wavInFile(wavFile, std::ios::binary);
+        if (!readWavHeader(wavInFile, header)) {
+            std::cerr << "Failed to read WAV header.\n";
+            return;
+        }
+        wavInFile.close();
+    }
+
+    // Open the file for reading and writing (append mode or create)
+    std::ofstream wavOutFile;
+    if (isNewFile) {
+        // Create a new file
+        wavOutFile.open(wavFile, std::ios::binary | std::ios::trunc);  // Use trunc to create a new file
+    } else {
+        // Open the existing file for appending
+        wavOutFile.open(wavFile, std::ios::binary | std::ios::in | std::ios::out);
+    }
+
+    if (!wavOutFile) {
+        std::cerr << "Failed to open WAV file for writing.\n";
+        return;
+    }
+
+    // Seek to the end of the current data chunk if the file exists
+    if (!isNewFile) {
+        wavOutFile.seekp(0, std::ios::end);
+    } else {
+        // Write the header if it's a new file
+        writeWavHeader(wavOutFile, header);
+    }
+
+    // Append the PCM data to the file
+    wavOutFile.write(reinterpret_cast<const char*>(pcmBuffer), bufferSize);
+
+    // Update the data chunk size and overall file size
+    header.data_size += bufferSize;
+    header.overall_size = 36 + header.data_size;
+
+    // Seek back to the start of the file to update the header
+    wavOutFile.seekp(0, std::ios::beg);
+    writeWavHeader(wavOutFile, header);
+
+    // Close the output file
+    wavOutFile.close();
+}
+virtual void onMixedAudioRawDataReceived(AudioRawData* data_) {
 		if (getRawAudio) {
 
 			std::string filename = "output.pcm";
 
-			printf("onMixedAudioRawDataReceived\n");
+			//printf("onMixedAudioRawDataReceived\n");
 			if (data_) {
-				savePcmBufferToFile(filename, data_->GetBuffer(), data_->GetBufferLen());
-				printf("Data buffer: %s\n", data_->GetBuffer());
+				;
+				convertPcmBufferToWav("output.wav", reinterpret_cast<uint8_t*>(data_->GetBuffer()), data_->GetBufferLen(), data_->GetSampleRate(), data_->GetChannelNum());
+				//savePcmBufferToFile(filename, data_->GetBuffer(), data_->GetBufferLen());
+				//printf("Data buffer: %s\n", data_->GetBuffer());
 				//printf("Length is : %d\n", data_->GetBufferLen());
 				//printf("Sample is : %d\n", data_->GetSampleRate());
 				//printf("Channel is : %d\n", data_->GetChannelNum());
+				//
+				////print counter
+				//printf("Counter is : %d\n", counter);
+
+
 			}
 
 		}
@@ -226,14 +361,14 @@ public:
 			std::string extension = ".pcm";
 			filename.append(extension);
 
-			printf("onOneWayAudioRawDataReceived\n");
+		/*	printf("onOneWayAudioRawDataReceived\n");
 			if (data_) {
 				savePcmBufferToFile(filename, data_->GetBuffer(), data_->GetBufferLen());
 				printf("Data buffer: %s\n", data_->GetBuffer());
 				printf("Length is : %d\n", data_->GetBufferLen());
 				printf("Sample is : %d\n", data_->GetSampleRate());
 				printf("Channel is : %d\n", data_->GetChannelNum());
-			}
+			}*/
 		}
 	};
 

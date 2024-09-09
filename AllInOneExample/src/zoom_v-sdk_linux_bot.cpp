@@ -677,7 +677,7 @@ public:
 	virtual void onAnnotationHelperActived(void* handle) {};
 	virtual void onVideoAlphaChannelStatusChanged(bool isAlphaModeOn) {};
 };
-};
+
 
 
 

@@ -1,10 +1,14 @@
-#run these in root directory
+#run these in the individual directory's src folder
 
 
 #build Ubuntu
 
-docker build -t vsdk-1.8.2-on-ubuntu -f Dockerfile-Ubuntu/Dockerfile .
-docker run -it --rm vsdk-1.8.2-on-ubuntu
+docker build -t vsdk-x.x.x-on-ubuntu -f ../Dockerfile-Ubuntu/Dockerfile .
+docker run -it --rm vsdk-x.x.x-on-ubuntu
+
+#macOS
+docker build --platform linux/amd64 -t vsdk-x.x.x-on-ubuntu -f Dockerfile-Ubuntu/Dockerfile .
+docker run -it --platform linux/amd64  vsdk-x.x.x-on-ubuntu
 
 #list all images
 docker images -a

@@ -53,6 +53,10 @@ RUN apt-get install -y pulseaudio
 
 RUN apt-get install -y libcurl4-openssl-dev
 
+RUN apt-get install -y ffmpeg
+
+
+
 # Set the working directory
 WORKDIR /app
 
@@ -69,8 +73,8 @@ WORKDIR /app/bin
 
 # Define a shell script to run multiple commands
 RUN echo '#!/bin/bash' > /app/bin/run.sh \
-    && echo '/app/src/setup-pulseaudio.sh' >> /app/bin/run.sh \
-    && echo './zoom_v-sdk_linux_bot' >> /app/bin/run.sh
+    && echo '/app/setup-pulseaudio.sh' >> /app/bin/run.sh \
+    && echo './GetRawVideoAndAudioDemo' >> /app/bin/run.sh
 
 # Make the run script executable
 RUN chmod +x /app/bin/run.sh
@@ -78,4 +82,5 @@ RUN chmod +x /app/bin/run.sh
 # Run the meetingSDKDemo binary when the container starts
 CMD ["/app/bin/run.sh"]
 #CMD ["/bin/bash"]
-#CMD ["./zoom_v-sdk_linux_bot"]
+#CMD ["./GetRawVideoAndAudioDemo"]
+
