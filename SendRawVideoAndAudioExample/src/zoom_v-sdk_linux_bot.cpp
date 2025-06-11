@@ -329,6 +329,7 @@ void joinVideoSDKSession(std::string& session_name, std::string& session_psw, st
 	session_context.userName = "Linux Bot";
 	session_context.token = session_token.c_str();
 	session_context.videoOption.localVideoOn = true;
+	
 	session_context.audioOption.connect = false;
 	session_context.audioOption.mute = true;
 

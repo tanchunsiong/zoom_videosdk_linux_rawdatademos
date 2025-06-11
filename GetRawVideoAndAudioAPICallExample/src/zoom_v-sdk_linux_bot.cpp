@@ -51,7 +51,7 @@ bool getRawShare = false;
 
 bool getSignatureFromWebService = true;
 
-std::string apiKey = "xxxxxx";
+std::string apiKey = "xxxxx";
 std::string audioFile = "output.wav";
 
 

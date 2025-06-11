@@ -13,6 +13,8 @@ class ZoomVideoSDKVideoSource :
 public: 
 
 	IZoomVideoSDKVideoSender* video_sender_;
+	int width_;
+	int height_;
 
  
 
@@ -25,7 +27,10 @@ public:
 	virtual void onStopSend() ;
 	
 	virtual void onUninitialized();
-protected:
+
+	virtual void sendVideoToVideoSource(IZoomVideoSDKVideoSender* video_sender, std::string video_source, int width, int height);
+
+	
 
 
 };
