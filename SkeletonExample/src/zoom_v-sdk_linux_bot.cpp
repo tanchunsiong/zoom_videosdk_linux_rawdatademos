@@ -19,6 +19,7 @@
 #include <SDL2/SDL.h>
 #include "VideoRenderer.h"
 #include "VideoDisplayBridge.h"
+#include "PreviewVideoHandler.h"
 #endif
 
 #include "helpers/zoom_video_sdk_user_helper_interface.h"
@@ -69,8 +70,14 @@ Gtk::ComboBoxText* g_camera_combo = nullptr;
 Gtk::ComboBoxText* g_microphone_combo = nullptr;
 Gtk::ComboBoxText* g_speaker_combo = nullptr;
 
-// Self video management
-VideoDisplayBridge* g_self_video_bridge = nullptr;
+// Video management - separate self and remote video
+PreviewVideoHandler* g_preview_handler = nullptr;
+bool g_self_video_enabled = false;
+bool g_remote_video_enabled = true;
+
+// UI controls for separate video management
+Gtk::Button* g_self_video_button = nullptr;
+Gtk::Button* g_remote_video_button = nullptr;
 #endif
 
 std::string getSelfDirPath()
@@ -89,6 +96,9 @@ std::string getSelfDirPath()
 }
 
 #if BUILD_GUI
+// Forward declarations
+void updateVideoButtonStates();
+
 // UI Helper Functions (GUI only)
 void updateStatus(const std::string& message)
 {
@@ -110,6 +120,9 @@ void updateButtonStates()
         g_mute_audio_button->set_label(g_audio_muted ? "Unmute Audio" : "Mute Audio");
     if (g_mute_video_button)
         g_mute_video_button->set_label(g_video_muted ? "Unmute Video" : "Mute Video");
+    
+    // Update separate video control buttons
+    updateVideoButtonStates();
 }
 
 // Device management functions
@@ -200,26 +213,87 @@ void setupSelfVideo()
 {
     if (!video_sdk_obj || !g_video_renderer) return;
     
-    IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
-    if (session)
+    if (!g_preview_handler)
     {
-        IZoomVideoSDKUser* myself = session->getMyself();
-        if (myself && !g_self_video_bridge)
+        printf("Setting up self video preview\n");
+        g_preview_handler = new PreviewVideoHandler(g_video_renderer);
+        if (g_self_video_enabled)
         {
-            printf("Setting up self video for user: %s\n", myself->getUserName());
-            g_self_video_bridge = new VideoDisplayBridge(myself, g_video_renderer);
+            g_preview_handler->StartPreview();
         }
     }
 }
 
 void cleanupSelfVideo()
 {
-    if (g_self_video_bridge)
+    if (g_preview_handler)
     {
-        delete g_self_video_bridge;
-        g_self_video_bridge = nullptr;
-        printf("Cleaned up self video\n");
+        delete g_preview_handler;
+        g_preview_handler = nullptr;
+        printf("Cleaned up self video preview\n");
     }
+}
+
+// New separate video control functions
+void updateVideoButtonStates()
+{
+    if (g_self_video_button)
+    {
+        g_self_video_button->set_sensitive(g_in_session);
+        g_self_video_button->set_label(g_self_video_enabled ? "Stop Self Video" : "Start Self Video");
+    }
+    if (g_remote_video_button)
+    {
+        g_remote_video_button->set_sensitive(g_in_session);
+        g_remote_video_button->set_label(g_remote_video_enabled ? "Stop Remote Video" : "Start Remote Video");
+    }
+}
+
+void on_self_video_clicked()
+{
+    if (!video_sdk_obj || !g_in_session) return;
+    
+    if (g_self_video_enabled)
+    {
+        // Stop self video preview
+        if (g_preview_handler)
+        {
+            g_preview_handler->StopPreview();
+        }
+        g_self_video_enabled = false;
+        printf("Self video preview stopped\n");
+    }
+    else
+    {
+        // Start self video preview
+        if (!g_preview_handler && g_video_renderer)
+        {
+            g_preview_handler = new PreviewVideoHandler(g_video_renderer);
+        }
+        if (g_preview_handler)
+        {
+            if (g_preview_handler->StartPreview())
+            {
+                g_self_video_enabled = true;
+                printf("Self video preview started\n");
+            }
+        }
+    }
+    updateVideoButtonStates();
+}
+
+void on_remote_video_clicked()
+{
+    if (!video_sdk_obj || !g_in_session) return;
+    
+    g_remote_video_enabled = !g_remote_video_enabled;
+    printf("Remote video %s\n", g_remote_video_enabled ? "enabled" : "disabled");
+    
+    // Note: Remote video control would need additional implementation
+    // to actually stop/start remote video streams. For now, this just
+    // toggles the state. The VideoDisplayBridge already handles remote users only.
+    
+    updateVideoButtonStates();
 }
 
 // Device selection callbacks
@@ -946,6 +1020,33 @@ int main(int argc, char* argv[])
     control_box.pack_start(mute_video_button, Gtk::PACK_SHRINK);
 
     main_box.pack_start(control_frame, Gtk::PACK_SHRINK);
+
+    // Create separate video controls section
+    Gtk::Frame video_control_frame("Video Controls");
+    Gtk::Box video_control_box(Gtk::ORIENTATION_HORIZONTAL, 10);
+    video_control_box.set_margin_left(10);
+    video_control_box.set_margin_right(10);
+    video_control_box.set_margin_top(10);
+    video_control_box.set_margin_bottom(10);
+    video_control_frame.add(video_control_box);
+
+    // Self video button
+    Gtk::Button self_video_button("Start Self Video");
+    self_video_button.set_size_request(150, 40);
+    self_video_button.set_sensitive(false);
+    g_self_video_button = &self_video_button;
+    self_video_button.signal_clicked().connect(sigc::ptr_fun(on_self_video_clicked));
+    video_control_box.pack_start(self_video_button, Gtk::PACK_SHRINK);
+
+    // Remote video button
+    Gtk::Button remote_video_button("Stop Remote Video");
+    remote_video_button.set_size_request(150, 40);
+    remote_video_button.set_sensitive(false);
+    g_remote_video_button = &remote_video_button;
+    remote_video_button.signal_clicked().connect(sigc::ptr_fun(on_remote_video_clicked));
+    video_control_box.pack_start(remote_video_button, Gtk::PACK_SHRINK);
+
+    main_box.pack_start(video_control_frame, Gtk::PACK_SHRINK);
 
     // Create status display section
     Gtk::Frame status_frame("Status");

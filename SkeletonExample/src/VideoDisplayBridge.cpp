@@ -1,5 +1,8 @@
 #include "VideoDisplayBridge.h"
 #include <iostream>
+#include "zoom_video_sdk_api.h"
+#include "zoom_video_sdk_interface.h"
+#include "zoom_video_sdk_session_info_interface.h"
 
 std::vector<VideoDisplayBridge*> VideoDisplayBridge::list_;
 int VideoDisplayBridge::instance_count = 0;
@@ -8,10 +11,24 @@ VideoDisplayBridge::VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* r
     : user_(user), video_renderer_(renderer), is_share_screen_(false)
 {
     instance_id_ = instance_count++;
-    if (user_ && user_->GetVideoPipe()) {
+    
+    // Only subscribe to remote users' video, not local user
+    extern IZoomVideoSDK* video_sdk_obj;
+    bool isLocalUser = false;
+    if (video_sdk_obj) {
+        IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+        if (session) {
+            IZoomVideoSDKUser* myself = session->getMyself();
+            isLocalUser = (user_ == myself);
+        }
+    }
+    
+    if (!isLocalUser && user_ && user_->GetVideoPipe()) {
         user_->GetVideoPipe()->subscribe(ZoomVideoSDKResolution_720P, this);
         list_.push_back(this);
-        std::cout << "VideoDisplayBridge: Subscribed to video for user " << user_->getUserName() << std::endl;
+        std::cout << "VideoDisplayBridge: Subscribed to remote video for user " << user_->getUserName() << std::endl;
+    } else if (isLocalUser) {
+        std::cout << "VideoDisplayBridge: Skipping local user " << user_->getUserName() << " - use PreviewVideoHandler instead" << std::endl;
     }
 }
 
