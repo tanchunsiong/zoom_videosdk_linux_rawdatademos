@@ -25,6 +25,7 @@
 #include "zoom_video_sdk_def.h"
 #include "zoom_video_sdk_delegate_interface.h"
 #include "zoom_video_sdk_interface.h"
+#include "zoom_video_sdk_session_info_interface.h"
 
 #include "zoom_video_sdk_platform.h"
 
@@ -485,10 +486,14 @@ void on_mute_audio_clicked()
         if (audioHelper)
         {
             // Get current user for mute/unmute operations
-            IZoomVideoSDKUserHelper* userHelper = video_sdk_obj->getUserHelper();
-            if (userHelper)
+           
+
+            IZoomVideoSDKSession* m_sessionhelper = video_sdk_obj->getSessionInfo();
+		
+            if (m_sessionhelper)
             {
-                IZoomVideoSDKUser* currentUser = userHelper->getMySelf();
+                IZoomVideoSDKUser* currentUser = m_sessionhelper->getMyself();
+              
                 if (currentUser)
                 {
                     if (g_audio_muted)
