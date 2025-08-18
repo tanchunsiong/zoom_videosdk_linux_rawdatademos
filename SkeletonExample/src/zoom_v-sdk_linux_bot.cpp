@@ -62,6 +62,7 @@ Gtk::Button* g_leave_button = nullptr;
 Gtk::Button* g_mute_audio_button = nullptr;
 Gtk::Button* g_mute_video_button = nullptr;
 VideoRenderer* g_video_renderer = nullptr;
+Gtk::DrawingArea* g_video_drawing_area = nullptr;
 #endif
 
 std::string getSelfDirPath()
@@ -727,12 +728,10 @@ int main(int argc, char* argv[])
 
     // Create video display section
     Gtk::Frame video_frame("Video Display");
-    Gtk::Box video_box(Gtk::ORIENTATION_VERTICAL);
-    video_box.set_size_request(640, 480);
-    Gtk::Label video_placeholder("Video will appear here when session is joined");
-    video_placeholder.set_justify(Gtk::JUSTIFY_CENTER);
-    video_box.pack_start(video_placeholder);
-    video_frame.add(video_box);
+    Gtk::DrawingArea video_drawing_area;
+    video_drawing_area.set_size_request(640, 480);
+    g_video_drawing_area = &video_drawing_area;
+    video_frame.add(video_drawing_area);
     main_box.pack_start(video_frame);
 
     // Initialize video renderer
@@ -743,14 +742,14 @@ int main(int argc, char* argv[])
     }
     else
     {
-        // Create SDL window for video display
-        if (!g_video_renderer->CreateSDLWindow(nullptr))
+        // Create embedded renderer in GTK widget
+        if (!g_video_renderer->CreateEmbeddedRenderer(g_video_drawing_area))
         {
-            std::cerr << "Failed to create SDL video window" << std::endl;
+            std::cerr << "Failed to create embedded video renderer" << std::endl;
         }
         else
         {
-            std::cout << "Video renderer initialized successfully" << std::endl;
+            std::cout << "Video renderer embedded in GTK widget successfully" << std::endl;
         }
     }
 
