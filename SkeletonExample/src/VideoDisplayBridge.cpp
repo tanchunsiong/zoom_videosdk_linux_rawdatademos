@@ -12,7 +12,7 @@ VideoDisplayBridge::VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* r
 {
     instance_id_ = instance_count++;
     
-    // Only subscribe to remote users' video, not local user
+    // Subscribe to video for both local and remote users
     extern IZoomVideoSDK* video_sdk_obj;
     bool isLocalUser = false;
     if (video_sdk_obj) {
@@ -23,12 +23,16 @@ VideoDisplayBridge::VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* r
         }
     }
     
-    if (!isLocalUser && user_ && user_->GetVideoPipe()) {
+    if (user_ && user_->GetVideoPipe()) {
         user_->GetVideoPipe()->subscribe(ZoomVideoSDKResolution_720P, this);
         list_.push_back(this);
-        std::cout << "VideoDisplayBridge: Subscribed to remote video for user " << user_->getUserName() << std::endl;
-    } else if (isLocalUser) {
-        std::cout << "VideoDisplayBridge: Skipping local user " << user_->getUserName() << " - use PreviewVideoHandler instead" << std::endl;
+        if (isLocalUser) {
+            std::cout << "VideoDisplayBridge: Subscribed to self video for user " << user_->getUserName() << std::endl;
+        } else {
+            std::cout << "VideoDisplayBridge: Subscribed to remote video for user " << user_->getUserName() << std::endl;
+        }
+    } else {
+        std::cout << "VideoDisplayBridge: No video pipe available for user " << (user_ ? user_->getUserName() : "unknown") << std::endl;
     }
 }
 

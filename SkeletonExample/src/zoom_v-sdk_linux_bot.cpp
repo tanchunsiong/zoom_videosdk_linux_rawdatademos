@@ -62,8 +62,12 @@ Gtk::Button* g_join_button = nullptr;
 Gtk::Button* g_leave_button = nullptr;
 Gtk::Button* g_mute_audio_button = nullptr;
 Gtk::Button* g_mute_video_button = nullptr;
-VideoRenderer* g_video_renderer = nullptr;
-Gtk::DrawingArea* g_video_drawing_area = nullptr;
+
+// Separate video renderers for self and remote video
+VideoRenderer* g_self_video_renderer = nullptr;
+VideoRenderer* g_remote_video_renderer = nullptr;
+Gtk::DrawingArea* g_self_video_drawing_area = nullptr;
+Gtk::DrawingArea* g_remote_video_drawing_area = nullptr;
 
 // Device selection UI
 Gtk::ComboBoxText* g_camera_combo = nullptr;
@@ -211,26 +215,44 @@ void populateDeviceDropdowns()
 
 void setupSelfVideo()
 {
-    if (!video_sdk_obj || !g_video_renderer) return;
+    if (!video_sdk_obj || !g_self_video_renderer) return;
     
-    if (!g_preview_handler)
+    // Get the current user (myself) and create a video bridge for self video display
+    IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+    if (session)
     {
-        printf("Setting up self video preview\n");
-        g_preview_handler = new PreviewVideoHandler(g_video_renderer);
-        if (g_self_video_enabled)
+        IZoomVideoSDKUser* myself = session->getMyself();
+        if (myself)
         {
-            g_preview_handler->StartPreview();
+            printf("Setting up self video display for user: %s\n", myself->getUserName());
+            // Create a video bridge for self video (this will handle both display and transmission)
+            VideoDisplayBridge* self_bridge = new VideoDisplayBridge(myself, g_self_video_renderer);
         }
     }
 }
 
 void cleanupSelfVideo()
 {
+    // Get the current user and stop video display
+    if (video_sdk_obj)
+    {
+        IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+        if (session)
+        {
+            IZoomVideoSDKUser* myself = session->getMyself();
+            if (myself)
+            {
+                printf("Cleaning up self video display\n");
+                VideoDisplayBridge::stop_display_for(myself);
+            }
+        }
+    }
+    
+    // Clean up preview handler if it exists
     if (g_preview_handler)
     {
         delete g_preview_handler;
         g_preview_handler = nullptr;
-        printf("Cleaned up self video preview\n");
     }
 }
 
@@ -253,30 +275,41 @@ void on_self_video_clicked()
 {
     if (!video_sdk_obj || !g_in_session) return;
     
+    IZoomVideoSDKVideoHelper* videoHelper = video_sdk_obj->getVideoHelper();
+    if (!videoHelper) return;
+    
     if (g_self_video_enabled)
     {
-        // Stop self video preview
-        if (g_preview_handler)
+        // Stop self video transmission
+        ZoomVideoSDKErrors err = videoHelper->stopVideo();
+        if (err == ZoomVideoSDKErrors_Success)
         {
-            g_preview_handler->StopPreview();
+            g_self_video_enabled = false;
+            printf("Self video transmission stopped\n");
+            
+            // Clean up self video display
+            cleanupSelfVideo();
         }
-        g_self_video_enabled = false;
-        printf("Self video preview stopped\n");
+        else
+        {
+            printf("Failed to stop self video, error: %d\n", (int)err);
+        }
     }
     else
     {
-        // Start self video preview
-        if (!g_preview_handler && g_video_renderer)
+        // Start self video transmission
+        ZoomVideoSDKErrors err = videoHelper->startVideo();
+        if (err == ZoomVideoSDKErrors_Success)
         {
-            g_preview_handler = new PreviewVideoHandler(g_video_renderer);
+            g_self_video_enabled = true;
+            printf("Self video transmission started\n");
+            
+            // Set up self video display
+            setupSelfVideo();
         }
-        if (g_preview_handler)
+        else
         {
-            if (g_preview_handler->StartPreview())
-            {
-                g_self_video_enabled = true;
-                printf("Self video preview started\n");
-            }
+            printf("Failed to start self video, error: %d\n", (int)err);
         }
     }
     updateVideoButtonStates();
@@ -385,7 +418,8 @@ public:
 			// Populate device dropdowns after joining session
 			populateDeviceDropdowns();
 			
-			// Set up self video rendering
+			// Set up self video rendering and enable it by default
+			g_self_video_enabled = true;
 			setupSelfVideo();
 #endif
 			return G_SOURCE_REMOVE;
@@ -434,16 +468,24 @@ public:
 	virtual void onUserJoin(IZoomVideoSDKUserHelper* pUserHelper, IVideoSDKVector<IZoomVideoSDKUser*>* userList)
 	{
 #if BUILD_GUI
-		if (userList && g_video_renderer)
+		if (userList && g_remote_video_renderer && video_sdk_obj)
 		{
+			// Get current user to exclude from remote video display
+			IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+			IZoomVideoSDKUser* myself = session ? session->getMyself() : nullptr;
+			
 			int count = userList->GetCount();
 			for (int index = 0; index < count; index++)
 			{
 				IZoomVideoSDKUser* user = userList->GetItem(index);
-				if (user)
+				if (user && user != myself) // Only display remote users, not myself
 				{
-					printf("User joined: %s - setting up video display\n", user->getUserName());
-					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_video_renderer);
+					printf("Remote user joined: %s - setting up video display\n", user->getUserName());
+					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_remote_video_renderer);
+				}
+				else if (user == myself)
+				{
+					printf("Self user detected in onUserJoin: %s - skipping remote video display\n", user->getUserName());
 				}
 			}
 		}
@@ -472,19 +514,27 @@ public:
 	virtual void onUserVideoStatusChanged(IZoomVideoSDKVideoHelper* pVideoHelper,
 		IVideoSDKVector<IZoomVideoSDKUser*>* userList) {
 #if BUILD_GUI
-		if (userList && g_video_renderer)
+		if (userList && g_remote_video_renderer && video_sdk_obj)
 		{
+			// Get current user to exclude from remote video display
+			IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+			IZoomVideoSDKUser* myself = session ? session->getMyself() : nullptr;
+			
 			int count = userList->GetCount();
 			for (int index = 0; index < count; index++)
 			{
 				IZoomVideoSDKUser* user = userList->GetItem(index);
-				if (user)
+				if (user && user != myself) // Only handle remote users, not myself
 				{
-					printf("Video status changed for user: %s\n", user->getUserName());
+					printf("Video status changed for remote user: %s\n", user->getUserName());
 					// For now, we'll recreate the bridge when video status changes
 					// This ensures we capture video when users turn their camera on
 					VideoDisplayBridge::stop_display_for(user);
-					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_video_renderer);
+					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_remote_video_renderer);
+				}
+				else if (user == myself)
+				{
+					printf("Self user detected in onUserVideoStatusChanged: %s - skipping remote video display\n", user->getUserName());
 				}
 			}
 		}
@@ -701,7 +751,7 @@ void joinVideoSDKSession(std::string& session_name, std::string& session_psw, st
 	session_context.userName = "Linux Bot";
 	session_context.token = session_token.c_str();
 	session_context.videoOption.localVideoOn = true;
-	session_context.audioOption.connect = false;
+	session_context.audioOption.connect = true;
 	session_context.audioOption.mute = true;
 
 
@@ -847,19 +897,19 @@ void my_handler(int s)
 {
 	printf("\nCaught signal %d\n", s);
 	
-	printf("\Leaving Session\n");
+	printf("Leaving Session\n");
 	if (video_sdk_obj)
 	{
 		video_sdk_obj->leaveSession(false);
-		printf("\Left Session\n");
+		printf("Left Session\n");
 		
-		printf("\Cleaning up SDK\n");
+		printf("Cleaning up SDK\n");
 		video_sdk_obj->cleanup();
-		printf("\Cleaned up SDK\n");
+		printf("Cleaned up SDK\n");
 
-		printf("\Destroying SDK Object\n");
+		printf("Destroying SDK Object\n");
 		DestroyZoomVideoSDKObj();
-		printf("\Destroyed SDK Object\n");
+		printf("Destroyed SDK Object\n");
 	}
 }
 
@@ -1060,30 +1110,67 @@ int main(int argc, char* argv[])
     status_frame.add(status_scrolled);
     main_box.pack_start(status_frame, Gtk::PACK_SHRINK);
 
-    // Create video display section
+    // Create separate video display sections side by side
     Gtk::Frame video_frame("Video Display");
-    Gtk::DrawingArea video_drawing_area;
-    video_drawing_area.set_size_request(480, 320);
-    g_video_drawing_area = &video_drawing_area;
-    video_frame.add(video_drawing_area);
+    Gtk::Box video_display_box(Gtk::ORIENTATION_HORIZONTAL, 10);
+    video_display_box.set_margin_left(10);
+    video_display_box.set_margin_right(10);
+    video_display_box.set_margin_top(10);
+    video_display_box.set_margin_bottom(10);
+    
+    // Self video section
+    Gtk::Frame self_video_frame("Self Video");
+    Gtk::DrawingArea self_video_drawing_area;
+    self_video_drawing_area.set_size_request(240, 180);
+    g_self_video_drawing_area = &self_video_drawing_area;
+    self_video_frame.add(self_video_drawing_area);
+    video_display_box.pack_start(self_video_frame);
+    
+    // Remote video section
+    Gtk::Frame remote_video_frame("Remote Video");
+    Gtk::DrawingArea remote_video_drawing_area;
+    remote_video_drawing_area.set_size_request(240, 180);
+    g_remote_video_drawing_area = &remote_video_drawing_area;
+    remote_video_frame.add(remote_video_drawing_area);
+    video_display_box.pack_start(remote_video_frame);
+    
+    video_frame.add(video_display_box);
     main_box.pack_start(video_frame);
 
-    // Initialize video renderer
-    g_video_renderer = new VideoRenderer();
-    if (!g_video_renderer->Init())
+    // Initialize separate video renderers
+    g_self_video_renderer = new VideoRenderer();
+    if (!g_self_video_renderer->Init())
     {
-        std::cerr << "Failed to initialize video renderer" << std::endl;
+        std::cerr << "Failed to initialize self video renderer" << std::endl;
     }
     else
     {
-        // Create embedded renderer in GTK widget
-        if (!g_video_renderer->CreateEmbeddedRenderer(g_video_drawing_area))
+        // Create embedded renderer in GTK widget for self video
+        if (!g_self_video_renderer->CreateEmbeddedRenderer(g_self_video_drawing_area))
         {
-            std::cerr << "Failed to create embedded video renderer" << std::endl;
+            std::cerr << "Failed to create embedded self video renderer" << std::endl;
         }
         else
         {
-            std::cout << "Video renderer embedded in GTK widget successfully" << std::endl;
+            std::cout << "Self video renderer embedded in GTK widget successfully" << std::endl;
+        }
+    }
+    
+    g_remote_video_renderer = new VideoRenderer();
+    if (!g_remote_video_renderer->Init())
+    {
+        std::cerr << "Failed to initialize remote video renderer" << std::endl;
+    }
+    else
+    {
+        // Create embedded renderer in GTK widget for remote video
+        if (!g_remote_video_renderer->CreateEmbeddedRenderer(g_remote_video_drawing_area))
+        {
+            std::cerr << "Failed to create embedded remote video renderer" << std::endl;
+        }
+        else
+        {
+            std::cout << "Remote video renderer embedded in GTK widget successfully" << std::endl;
         }
     }
 
