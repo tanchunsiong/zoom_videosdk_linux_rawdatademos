@@ -63,6 +63,14 @@ Gtk::Button* g_mute_audio_button = nullptr;
 Gtk::Button* g_mute_video_button = nullptr;
 VideoRenderer* g_video_renderer = nullptr;
 Gtk::DrawingArea* g_video_drawing_area = nullptr;
+
+// Device selection UI
+Gtk::ComboBoxText* g_camera_combo = nullptr;
+Gtk::ComboBoxText* g_microphone_combo = nullptr;
+Gtk::ComboBoxText* g_speaker_combo = nullptr;
+
+// Self video management
+VideoDisplayBridge* g_self_video_bridge = nullptr;
 #endif
 
 std::string getSelfDirPath()
@@ -103,6 +111,174 @@ void updateButtonStates()
     if (g_mute_video_button)
         g_mute_video_button->set_label(g_video_muted ? "Unmute Video" : "Mute Video");
 }
+
+// Device management functions
+void populateDeviceDropdowns()
+{
+    if (!video_sdk_obj) return;
+    
+    // Populate camera dropdown
+    if (g_camera_combo)
+    {
+        g_camera_combo->remove_all();
+        IZoomVideoSDKVideoHelper* videoHelper = video_sdk_obj->getVideoHelper();
+        if (videoHelper)
+        {
+            IVideoSDKVector<IZoomVideoSDKCameraDevice*>* cameraList = videoHelper->getCameraList();
+            if (cameraList)
+            {
+                int count = cameraList->GetCount();
+                for (int i = 0; i < count; i++)
+                {
+                    IZoomVideoSDKCameraDevice* camera = cameraList->GetItem(i);
+                    if (camera)
+                    {
+                        std::string cameraName = camera->getDeviceName();
+                        g_camera_combo->append(camera->getDeviceId(), cameraName);
+                    }
+                }
+                if (count > 0)
+                    g_camera_combo->set_active(0);
+            }
+        }
+    }
+    
+    // Populate microphone dropdown
+    if (g_microphone_combo)
+    {
+        g_microphone_combo->remove_all();
+        IZoomVideoSDKAudioHelper* audioHelper = video_sdk_obj->getAudioHelper();
+        if (audioHelper)
+        {
+            IVideoSDKVector<IZoomVideoSDKMicDevice*>* micList = audioHelper->getMicList();
+            if (micList)
+            {
+                int count = micList->GetCount();
+                for (int i = 0; i < count; i++)
+                {
+                    IZoomVideoSDKMicDevice* mic = micList->GetItem(i);
+                    if (mic)
+                    {
+                        std::string micName = mic->getDeviceName();
+                        g_microphone_combo->append(mic->getDeviceId(), micName);
+                    }
+                }
+                if (count > 0)
+                    g_microphone_combo->set_active(0);
+            }
+        }
+    }
+    
+    // Populate speaker dropdown
+    if (g_speaker_combo)
+    {
+        g_speaker_combo->remove_all();
+        IZoomVideoSDKAudioHelper* audioHelper = video_sdk_obj->getAudioHelper();
+        if (audioHelper)
+        {
+            IVideoSDKVector<IZoomVideoSDKSpeakerDevice*>* speakerList = audioHelper->getSpeakerList();
+            if (speakerList)
+            {
+                int count = speakerList->GetCount();
+                for (int i = 0; i < count; i++)
+                {
+                    IZoomVideoSDKSpeakerDevice* speaker = speakerList->GetItem(i);
+                    if (speaker)
+                    {
+                        std::string speakerName = speaker->getDeviceName();
+                        g_speaker_combo->append(speaker->getDeviceId(), speakerName);
+                    }
+                }
+                if (count > 0)
+                    g_speaker_combo->set_active(0);
+            }
+        }
+    }
+}
+
+void setupSelfVideo()
+{
+    if (!video_sdk_obj || !g_video_renderer) return;
+    
+    IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+    if (session)
+    {
+        IZoomVideoSDKUser* myself = session->getMyself();
+        if (myself && !g_self_video_bridge)
+        {
+            printf("Setting up self video for user: %s\n", myself->getUserName());
+            g_self_video_bridge = new VideoDisplayBridge(myself, g_video_renderer);
+        }
+    }
+}
+
+void cleanupSelfVideo()
+{
+    if (g_self_video_bridge)
+    {
+        delete g_self_video_bridge;
+        g_self_video_bridge = nullptr;
+        printf("Cleaned up self video\n");
+    }
+}
+
+// Device selection callbacks
+void on_camera_changed()
+{
+    if (!video_sdk_obj || !g_camera_combo) return;
+    
+    std::string selectedId = g_camera_combo->get_active_id();
+    if (!selectedId.empty())
+    {
+        IZoomVideoSDKVideoHelper* videoHelper = video_sdk_obj->getVideoHelper();
+        if (videoHelper)
+        {
+            bool result = videoHelper->selectCamera(selectedId.c_str());
+            printf("Camera changed to: %s (result: %s)\n", selectedId.c_str(), result ? "success" : "failed");
+            
+            // Refresh self video after camera change
+            if (g_in_session)
+            {
+                cleanupSelfVideo();
+                setupSelfVideo();
+            }
+        }
+    }
+}
+
+void on_microphone_changed()
+{
+    if (!video_sdk_obj || !g_microphone_combo) return;
+    
+    std::string selectedId = g_microphone_combo->get_active_id();
+    std::string selectedText = g_microphone_combo->get_active_text();
+    if (!selectedId.empty() && !selectedText.empty())
+    {
+        IZoomVideoSDKAudioHelper* audioHelper = video_sdk_obj->getAudioHelper();
+        if (audioHelper)
+        {
+            ZoomVideoSDKErrors err = audioHelper->selectMic(selectedId.c_str(), selectedText.c_str());
+            printf("Microphone changed to: %s (result: %d)\n", selectedText.c_str(), (int)err);
+        }
+    }
+}
+
+void on_speaker_changed()
+{
+    if (!video_sdk_obj || !g_speaker_combo) return;
+    
+    std::string selectedId = g_speaker_combo->get_active_id();
+    std::string selectedText = g_speaker_combo->get_active_text();
+    if (!selectedId.empty() && !selectedText.empty())
+    {
+        IZoomVideoSDKAudioHelper* audioHelper = video_sdk_obj->getAudioHelper();
+        if (audioHelper)
+        {
+            ZoomVideoSDKErrors err = audioHelper->selectSpeaker(selectedId.c_str(), selectedText.c_str());
+            printf("Speaker changed to: %s (result: %d)\n", selectedText.c_str(), (int)err);
+        }
+    }
+}
 #else
 // Console versions of UI functions
 void updateStatus(const std::string& message)
@@ -130,6 +306,14 @@ public:
 			g_in_session = true;
 			updateStatus("Session joined successfully");
 			updateButtonStates();
+			
+#if BUILD_GUI
+			// Populate device dropdowns after joining session
+			populateDeviceDropdowns();
+			
+			// Set up self video rendering
+			setupSelfVideo();
+#endif
 			return G_SOURCE_REMOVE;
 		}, nullptr);
 
@@ -152,6 +336,11 @@ public:
 			g_in_session = false;
 			updateStatus("Left session");
 			updateButtonStates();
+			
+#if BUILD_GUI
+			// Clean up self video when leaving session
+			cleanupSelfVideo();
+#endif
 			return G_SOURCE_REMOVE;
 		}, nullptr);
 	};
@@ -609,7 +798,7 @@ int main(int argc, char* argv[])
 
     // Create main window
     Gtk::Window window;
-    window.set_default_size(800, 600);
+    window.set_default_size(700, 500);
     window.set_title("Zoom Video SDK Demo");
 
     // Create main vertical layout container
@@ -672,6 +861,50 @@ int main(int argc, char* argv[])
 
     main_box.pack_start(input_frame, Gtk::PACK_SHRINK);
 
+    // Create device selection section
+    Gtk::Frame device_frame("Device Settings");
+    Gtk::Box device_box(Gtk::ORIENTATION_VERTICAL, 5);
+    device_box.set_margin_left(10);
+    device_box.set_margin_right(10);
+    device_box.set_margin_top(10);
+    device_box.set_margin_bottom(10);
+    device_frame.add(device_box);
+
+    // Camera selection
+    Gtk::Box camera_box(Gtk::ORIENTATION_HORIZONTAL, 5);
+    Gtk::Label camera_label("Camera:");
+    camera_label.set_size_request(120, -1);
+    Gtk::ComboBoxText camera_combo;
+    g_camera_combo = &camera_combo;
+    camera_combo.signal_changed().connect(sigc::ptr_fun(on_camera_changed));
+    camera_box.pack_start(camera_label, Gtk::PACK_SHRINK);
+    camera_box.pack_start(camera_combo);
+    device_box.pack_start(camera_box, Gtk::PACK_SHRINK);
+
+    // Microphone selection
+    Gtk::Box microphone_box(Gtk::ORIENTATION_HORIZONTAL, 5);
+    Gtk::Label microphone_label("Microphone:");
+    microphone_label.set_size_request(120, -1);
+    Gtk::ComboBoxText microphone_combo;
+    g_microphone_combo = &microphone_combo;
+    microphone_combo.signal_changed().connect(sigc::ptr_fun(on_microphone_changed));
+    microphone_box.pack_start(microphone_label, Gtk::PACK_SHRINK);
+    microphone_box.pack_start(microphone_combo);
+    device_box.pack_start(microphone_box, Gtk::PACK_SHRINK);
+
+    // Speaker selection
+    Gtk::Box speaker_box(Gtk::ORIENTATION_HORIZONTAL, 5);
+    Gtk::Label speaker_label("Speaker:");
+    speaker_label.set_size_request(120, -1);
+    Gtk::ComboBoxText speaker_combo;
+    g_speaker_combo = &speaker_combo;
+    speaker_combo.signal_changed().connect(sigc::ptr_fun(on_speaker_changed));
+    speaker_box.pack_start(speaker_label, Gtk::PACK_SHRINK);
+    speaker_box.pack_start(speaker_combo);
+    device_box.pack_start(speaker_box, Gtk::PACK_SHRINK);
+
+    main_box.pack_start(device_frame, Gtk::PACK_SHRINK);
+
     // Create control buttons section
     Gtk::Frame control_frame("Session Controls");
     Gtk::Box control_box(Gtk::ORIENTATION_HORIZONTAL, 10);
@@ -729,7 +962,7 @@ int main(int argc, char* argv[])
     // Create video display section
     Gtk::Frame video_frame("Video Display");
     Gtk::DrawingArea video_drawing_area;
-    video_drawing_area.set_size_request(640, 480);
+    video_drawing_area.set_size_request(480, 320);
     g_video_drawing_area = &video_drawing_area;
     video_frame.add(video_drawing_area);
     main_box.pack_start(video_frame);
