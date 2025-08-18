@@ -18,6 +18,7 @@
 #include <gtkmm.h>
 #include <SDL2/SDL.h>
 #include "VideoRenderer.h"
+#include "VideoDisplayBridge.h"
 #endif
 
 #include "helpers/zoom_video_sdk_user_helper_interface.h"
@@ -168,16 +169,63 @@ public:
 
 	virtual void onUserJoin(IZoomVideoSDKUserHelper* pUserHelper, IVideoSDKVector<IZoomVideoSDKUser*>* userList)
 	{
-	
+#if BUILD_GUI
+		if (userList && g_video_renderer)
+		{
+			int count = userList->GetCount();
+			for (int index = 0; index < count; index++)
+			{
+				IZoomVideoSDKUser* user = userList->GetItem(index);
+				if (user)
+				{
+					printf("User joined: %s - setting up video display\n", user->getUserName());
+					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_video_renderer);
+				}
+			}
+		}
+#endif
 	};
 
 	virtual void onUserLeave(IZoomVideoSDKUserHelper* pUserHelper, IVideoSDKVector<IZoomVideoSDKUser*>* userList)
 	{
-	
+#if BUILD_GUI
+		if (userList)
+		{
+			int count = userList->GetCount();
+			for (int index = 0; index < count; index++)
+			{
+				IZoomVideoSDKUser* user = userList->GetItem(index);
+				if (user)
+				{
+					printf("User left: %s - cleaning up video display\n", user->getUserName());
+					VideoDisplayBridge::stop_display_for(user);
+				}
+			}
+		}
+#endif
 	};
 
 	virtual void onUserVideoStatusChanged(IZoomVideoSDKVideoHelper* pVideoHelper,
-		IVideoSDKVector<IZoomVideoSDKUser*>* userList) {};
+		IVideoSDKVector<IZoomVideoSDKUser*>* userList) {
+#if BUILD_GUI
+		if (userList && g_video_renderer)
+		{
+			int count = userList->GetCount();
+			for (int index = 0; index < count; index++)
+			{
+				IZoomVideoSDKUser* user = userList->GetItem(index);
+				if (user)
+				{
+					printf("Video status changed for user: %s\n", user->getUserName());
+					// For now, we'll recreate the bridge when video status changes
+					// This ensures we capture video when users turn their camera on
+					VideoDisplayBridge::stop_display_for(user);
+					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_video_renderer);
+				}
+			}
+		}
+#endif
+	};
 
 
 	virtual void onUserAudioStatusChanged(IZoomVideoSDKAudioHelper* pAudioHelper,
@@ -692,6 +740,18 @@ int main(int argc, char* argv[])
     if (!g_video_renderer->Init())
     {
         std::cerr << "Failed to initialize video renderer" << std::endl;
+    }
+    else
+    {
+        // Create SDL window for video display
+        if (!g_video_renderer->CreateSDLWindow(nullptr))
+        {
+            std::cerr << "Failed to create SDL video window" << std::endl;
+        }
+        else
+        {
+            std::cout << "Video renderer initialized successfully" << std::endl;
+        }
     }
 
     // Load default values from config.json if available
