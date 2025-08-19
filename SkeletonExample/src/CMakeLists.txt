@@ -52,7 +52,9 @@ if(BUILD_GUI)
     
     set(GUI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/VideoRenderer.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/VideoDisplayBridge.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/PreviewVideoHandler.cpp)
+                    ${CMAKE_CURRENT_SOURCE_DIR}/ZoomVideoRenderer.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/PreviewVideoHandler.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/RemoteVideoRawDataHandler.cpp)
 else()
     add_definitions(-DBUILD_GUI=0)
     set(GUI_SOURCES "")

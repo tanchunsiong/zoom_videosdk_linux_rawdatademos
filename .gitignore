@@ -34,3 +34,6 @@ CMakeSettings.json
 
 **/lib/zoom_video_sdk/libvideosdk.so
 **/lib/zoom_video_sdk/libvideosdk.so.1
+
+
+**/CMakeFiles/*

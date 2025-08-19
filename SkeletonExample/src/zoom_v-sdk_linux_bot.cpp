@@ -132,8 +132,10 @@ AudioPlayback* g_audio_playback = nullptr;
 #include <gtkmm.h>
 #include <SDL2/SDL.h>
 #include "VideoRenderer.h"
+#include "ZoomVideoRenderer.h"
 #include "VideoDisplayBridge.h"
 #include "PreviewVideoHandler.h"
+#include "RemoteVideoRawDataHandler.h"
 #endif
 
 #include "helpers/zoom_video_sdk_user_helper_interface.h"
@@ -188,7 +190,9 @@ Gtk::ComboBoxText* g_camera_combo = nullptr;
 Gtk::ComboBoxText* g_microphone_combo = nullptr;
 Gtk::ComboBoxText* g_speaker_combo = nullptr;
 
-// Video management - separate self and remote video
+// Windows-like video management - separate renderers for display only
+ZoomVideoRenderer* g_self_video_zoom_renderer = nullptr;
+RemoteVideoRawDataHandler* g_remote_video_raw_handler = nullptr;
 PreviewVideoHandler* g_preview_handler = nullptr;
 bool g_self_video_enabled = false;
 bool g_remote_video_enabled = true;
@@ -331,42 +335,57 @@ void setupSelfVideo()
 {
     if (!video_sdk_obj || !g_self_video_renderer) return;
     
-    // Get the current user (myself) and create a video bridge for self video display
+    // Windows-like approach: Create renderer for self-view display only
     IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
     if (session)
     {
         IZoomVideoSDKUser* myself = session->getMyself();
         if (myself)
         {
-            printf("Setting up self video display for user: %s\n", myself->getUserName());
+            printf("Setting up Windows-like self video display for user: %s\n", myself->getUserName());
             
-            // Clean up any existing self video bridge first
-            VideoDisplayBridge::stop_display_for(myself);
+            // Clean up any existing renderer first
+            if (g_self_video_zoom_renderer)
+            {
+                delete g_self_video_zoom_renderer;
+                g_self_video_zoom_renderer = nullptr;
+            }
             
-            // Small delay to ensure cleanup is complete
-            usleep(100000); // 100ms delay
+            // Check if video pipe is available before attempting subscription
+            IZoomVideoSDKRawDataPipe* videoPipe = myself->GetVideoPipe();
+            if (!videoPipe)
+            {
+                printf("Video pipe not yet available for self video, will retry later\n");
+                return;
+            }
             
-            // Create a video bridge for self video display only
-            VideoDisplayBridge* self_bridge = new VideoDisplayBridge(myself, g_self_video_renderer);
+            // Create new ZoomVideoRenderer for self-view (subscription-based like Windows)
+            g_self_video_zoom_renderer = new ZoomVideoRenderer(g_self_video_renderer);
+            
+            // Subscribe to self video for display (Windows pattern: treat self as another user for display)
+            if (g_self_video_zoom_renderer->SubscribeToUser(myself, ZoomVideoSDKResolution_720P))
+            {
+                printf("Successfully subscribed to self video for display\n");
+            }
+            else
+            {
+                printf("Failed to subscribe to self video for display - video pipe may not be ready\n");
+                delete g_self_video_zoom_renderer;
+                g_self_video_zoom_renderer = nullptr;
+            }
         }
     }
 }
 
 void cleanupSelfVideo()
 {
-    // Get the current user and stop video display
-    if (video_sdk_obj)
+    printf("Cleaning up Windows-like self video display\n");
+    
+    // Clean up ZoomVideoRenderer
+    if (g_self_video_zoom_renderer)
     {
-        IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
-        if (session)
-        {
-            IZoomVideoSDKUser* myself = session->getMyself();
-            if (myself)
-            {
-                printf("Cleaning up self video display\n");
-                VideoDisplayBridge::stop_display_for(myself);
-            }
-        }
+        delete g_self_video_zoom_renderer;
+        g_self_video_zoom_renderer = nullptr;
     }
     
     // Clean up preview handler if it exists
@@ -408,8 +427,14 @@ void on_self_video_clicked()
             g_self_video_enabled = false;
             printf("Self video transmission stopped\n");
             
-            // Clean up self video display
-            cleanupSelfVideo();
+            // Stop preview-based self video display
+            if (g_preview_handler)
+            {
+                g_preview_handler->StopPreview();
+                delete g_preview_handler;
+                g_preview_handler = nullptr;
+                printf("Preview-based self video display stopped\n");
+            }
         }
         else
         {
@@ -425,8 +450,21 @@ void on_self_video_clicked()
             g_self_video_enabled = true;
             printf("Self video transmission started\n");
             
-            // Set up self video display
-            setupSelfVideo();
+            // Start preview-based self video display
+            if (g_self_video_renderer && !g_preview_handler)
+            {
+                g_preview_handler = new PreviewVideoHandler(g_self_video_renderer);
+                if (g_preview_handler->StartPreview())
+                {
+                    printf("Preview-based self video display started\n");
+                }
+                else
+                {
+                    printf("Failed to start preview-based self video display\n");
+                    delete g_preview_handler;
+                    g_preview_handler = nullptr;
+                }
+            }
         }
         else
         {
@@ -443,9 +481,64 @@ void on_remote_video_clicked()
     g_remote_video_enabled = !g_remote_video_enabled;
     printf("Remote video %s\n", g_remote_video_enabled ? "enabled" : "disabled");
     
-    // Note: Remote video control would need additional implementation
-    // to actually stop/start remote video streams. For now, this just
-    // toggles the state. The VideoDisplayBridge already handles remote users only.
+    if (!g_remote_video_enabled)
+    {
+        // Disable remote video display - clean up existing raw data handler
+        if (g_remote_video_raw_handler)
+        {
+            g_remote_video_raw_handler->Unsubscribe();
+            delete g_remote_video_raw_handler;
+            g_remote_video_raw_handler = nullptr;
+            printf("Remote video display disabled - cleaned up raw data handler\n");
+        }
+    }
+    else
+    {
+        // Enable remote video display - trigger re-subscription for existing users
+        printf("Remote video display enabled - will subscribe to existing users with video using raw data callbacks\n");
+        
+        // Check for existing users with video and subscribe to them
+        IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+        if (session)
+        {
+            IZoomVideoSDKUser* myself = session->getMyself();
+            IVideoSDKVector<IZoomVideoSDKUser*>* userList = session->getRemoteUsers();
+            if (userList)
+            {
+                int count = userList->GetCount();
+                for (int index = 0; index < count; index++)
+                {
+                    IZoomVideoSDKUser* user = userList->GetItem(index);
+                    if (user && user != myself && user->GetVideoPipe())
+                    {
+                        printf("Found existing user %s with video - setting up raw data callback display\n", user->getUserName());
+                        
+                        // Clean up any existing remote video raw data handler first
+                        if (g_remote_video_raw_handler) {
+                            g_remote_video_raw_handler->Unsubscribe();
+                            delete g_remote_video_raw_handler;
+                            g_remote_video_raw_handler = nullptr;
+                        }
+                        
+                        // Create new RemoteVideoRawDataHandler for remote user
+                        if (g_remote_video_renderer) {
+                            g_remote_video_raw_handler = new RemoteVideoRawDataHandler(g_remote_video_renderer);
+                            
+                            // Subscribe to remote user's video using raw data callbacks
+                            if (g_remote_video_raw_handler->SubscribeToUser(user)) {
+                                printf("Successfully subscribed to remote video raw data for user: %s\n", user->getUserName());
+                                break; // Only handle one user at a time for now
+                            } else {
+                                printf("Failed to subscribe to remote video raw data for user: %s\n", user->getUserName());
+                                delete g_remote_video_raw_handler;
+                                g_remote_video_raw_handler = nullptr;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     updateVideoButtonStates();
 }
@@ -464,11 +557,31 @@ void on_camera_changed()
             bool result = videoHelper->selectCamera(selectedId.c_str());
             printf("Camera changed to: %s (result: %s)\n", selectedId.c_str(), result ? "success" : "failed");
             
-            // Refresh self video after camera change
-            if (g_in_session)
+            // Refresh preview-based self video after camera change
+            if (g_in_session && g_preview_handler)
             {
-                cleanupSelfVideo();
-                setupSelfVideo();
+                printf("Refreshing preview after camera change\n");
+                
+                // Stop current preview
+                g_preview_handler->StopPreview();
+                delete g_preview_handler;
+                g_preview_handler = nullptr;
+                
+                // Restart preview with new camera
+                if (g_self_video_renderer)
+                {
+                    g_preview_handler = new PreviewVideoHandler(g_self_video_renderer);
+                    if (g_preview_handler->StartPreview())
+                    {
+                        printf("Preview restarted successfully with new camera\n");
+                    }
+                    else
+                    {
+                        printf("Failed to restart preview with new camera\n");
+                        delete g_preview_handler;
+                        g_preview_handler = nullptr;
+                    }
+                }
             }
         }
     }
@@ -546,12 +659,36 @@ public:
 			updateButtonStates();
 			
 #if BUILD_GUI
-			// Populate device dropdowns after joining session
-			populateDeviceDropdowns();
-			
-			// Set up self video rendering and enable it by default
-			g_self_video_enabled = true;
-			setupSelfVideo();
+			// FIXED: Use preview-based self-video display instead of problematic subscription
+			if (video_sdk_obj) {
+				g_self_video_enabled = true; // Video is already ON from session start
+				printf("Video transmission already active from session start\n");
+				printf("Setting up preview-based self-video display (safer approach)\n");
+				
+				// Set up preview-based self-video display with a delay to ensure camera is ready
+				g_timeout_add(1000, [](gpointer data) -> gboolean {
+					printf("Initializing preview-based self-video display\n");
+					
+					// Clean up any existing preview handler first
+					if (g_preview_handler) {
+						delete g_preview_handler;
+						g_preview_handler = nullptr;
+					}
+					
+					// Create new preview handler using existing VideoRenderer
+					if (g_self_video_renderer) {
+						g_preview_handler = new PreviewVideoHandler(g_self_video_renderer);
+						if (g_preview_handler->StartPreview()) {
+							printf("Preview-based self-video display started successfully\n");
+						} else {
+							printf("Failed to start preview-based self-video display\n");
+							delete g_preview_handler;
+							g_preview_handler = nullptr;
+						}
+					}
+					return G_SOURCE_REMOVE; // Remove the timeout after execution
+				}, nullptr);
+			}
 #endif
 			return G_SOURCE_REMOVE;
 		}, nullptr);
@@ -618,8 +755,8 @@ public:
 				IZoomVideoSDKUser* user = userList->GetItem(index);
 				if (user && user != myself) // Only display remote users, not myself
 				{
-					printf("Remote user joined: %s - setting up video display\n", user->getUserName());
-					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_remote_video_renderer);
+					printf("Remote user joined: %s - will set up video display when video becomes available\n", user->getUserName());
+					// Don't immediately try to subscribe - wait for onUserVideoStatusChanged
 				}
 				else if (user == myself)
 				{
@@ -641,8 +778,16 @@ public:
 				IZoomVideoSDKUser* user = userList->GetItem(index);
 				if (user)
 				{
-					printf("User left: %s - cleaning up video display\n", user->getUserName());
-					VideoDisplayBridge::stop_display_for(user);
+					printf("User left: %s - cleaning up raw data handler for remote video\n", user->getUserName());
+					
+					// Clean up remote video raw data handler when user leaves
+					if (g_remote_video_raw_handler)
+					{
+						g_remote_video_raw_handler->Unsubscribe();
+						delete g_remote_video_raw_handler;
+						g_remote_video_raw_handler = nullptr;
+						printf("Cleaned up remote video raw data handler for user: %s\n", user->getUserName());
+					}
 				}
 			}
 		}
@@ -652,7 +797,7 @@ public:
 	virtual void onUserVideoStatusChanged(IZoomVideoSDKVideoHelper* pVideoHelper,
 		IVideoSDKVector<IZoomVideoSDKUser*>* userList) {
 #if BUILD_GUI
-		if (userList && g_remote_video_renderer && video_sdk_obj)
+		if (userList && video_sdk_obj && g_remote_video_enabled)
 		{
 			// Get current user to exclude from remote video display
 			IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
@@ -668,28 +813,42 @@ public:
 					
 					// Check if user has video enabled
 					if (user->GetVideoPipe()) {
-						// Only create bridge if one doesn't exist already
-						bool bridgeExists = false;
-						// Check if bridge already exists (simplified check)
-						// In a more robust implementation, you'd maintain a proper registry
-						printf("User %s has video pipe available, ensuring video bridge exists\n", user->getUserName());
+						printf("User %s has video pipe available - setting up raw data callback for remote video\n", user->getUserName());
 						
-						// For now, we'll still recreate but with a delay to prevent rapid recreation
-						static std::map<IZoomVideoSDKUser*, time_t> lastUpdate;
-						time_t now = time(nullptr);
-						if (lastUpdate.find(user) == lastUpdate.end() || (now - lastUpdate[user]) > 2) {
-							VideoDisplayBridge::stop_display_for(user);
-							VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_remote_video_renderer);
-							lastUpdate[user] = now;
+						// Clean up any existing remote video raw data handler first
+						if (g_remote_video_raw_handler) {
+							g_remote_video_raw_handler->Unsubscribe();
+							delete g_remote_video_raw_handler;
+							g_remote_video_raw_handler = nullptr;
+						}
+						
+						// Create new RemoteVideoRawDataHandler for remote user
+						if (g_remote_video_renderer) {
+							g_remote_video_raw_handler = new RemoteVideoRawDataHandler(g_remote_video_renderer);
+							
+							// Subscribe to remote user's video using raw data callbacks
+							if (g_remote_video_raw_handler->SubscribeToUser(user)) {
+								printf("Successfully subscribed to remote video raw data for user: %s\n", user->getUserName());
+							} else {
+								printf("Failed to subscribe to remote video raw data for user: %s\n", user->getUserName());
+								delete g_remote_video_raw_handler;
+								g_remote_video_raw_handler = nullptr;
+							}
 						}
 					} else {
-						printf("User %s has no video pipe, stopping video display\n", user->getUserName());
-						VideoDisplayBridge::stop_display_for(user);
+						printf("User %s has no video pipe - cleaning up remote video raw data handler\n", user->getUserName());
+						
+						// Clean up remote video raw data handler when user stops video
+						if (g_remote_video_raw_handler) {
+							g_remote_video_raw_handler->Unsubscribe();
+							delete g_remote_video_raw_handler;
+							g_remote_video_raw_handler = nullptr;
+						}
 					}
 				}
 				else if (user == myself)
 				{
-					printf("Self user detected in onUserVideoStatusChanged: %s - skipping remote video display\n", user->getUserName());
+					printf("Self user detected in onUserVideoStatusChanged: %s - using preview for self-video\n", user->getUserName());
 				}
 			}
 		}
@@ -952,9 +1111,10 @@ void joinVideoSDKSession(std::string& session_name, std::string& session_psw, st
 	session_context.sessionPassword = session_psw.c_str();
 	session_context.userName = "Linux Bot";
 	session_context.token = session_token.c_str();
-	session_context.videoOption.localVideoOn = true;
-	session_context.audioOption.connect = true;
-	session_context.audioOption.mute = false;  // Start with audio unmuted
+	// FIXED APPROACH: Enable both video and audio transmission
+	session_context.videoOption.localVideoOn = true;   // Start with video ON for transmission
+	session_context.audioOption.connect = true;        // FIXED: Connect audio for transmission
+	session_context.audioOption.mute = false;          // FIXED: Start unmuted for audio transmission
 
 
 	//join the session
@@ -962,6 +1122,19 @@ void joinVideoSDKSession(std::string& session_name, std::string& session_psw, st
 	if (video_sdk_obj)
 		session = video_sdk_obj->joinSession(session_context);
 
+	// CRITICAL FIX: Access video pipe immediately after session join (Windows pattern)
+	if (session) {
+		IZoomVideoSDKUser* myself = session->getMyself();
+		if (myself) {
+			// Access video pipe immediately to initialize it properly
+			IZoomVideoSDKRawDataPipe* videoPipe = myself->GetVideoPipe();
+			if (videoPipe) {
+				printf("Video pipe accessed successfully after session join\n");
+			} else {
+				printf("Warning: Video pipe not available immediately after session join\n");
+			}
+		}
+	}
 }
 
 #if BUILD_GUI
@@ -1021,6 +1194,18 @@ void on_join_session_clicked()
     IZoomVideoSDKSession* session = video_sdk_obj->joinSession(session_context);
     if (session)
     {
+        // CRITICAL FIX: Access video pipe immediately after session join (Windows pattern)
+        IZoomVideoSDKUser* myself = session->getMyself();
+        if (myself) {
+            // Access video pipe immediately to initialize it properly
+            IZoomVideoSDKRawDataPipe* videoPipe = myself->GetVideoPipe();
+            if (videoPipe) {
+                printf("GUI: Video pipe accessed successfully after session join\n");
+            } else {
+                printf("GUI: Warning: Video pipe not available immediately after session join\n");
+            }
+        }
+        
         g_in_session = true;
         updateButtonStates();
         updateStatus("Session joined successfully");
@@ -1411,6 +1596,37 @@ int main(int argc, char* argv[])
         }
     }
 
+    // Initialize Video SDK early to enable device enumeration before session join
+    // Following Windows sample pattern: SDK init -> populate devices -> join session
+    ZoomVideoSDKRawDataMemoryMode heap = ZoomVideoSDKRawDataMemoryMode::ZoomVideoSDKRawDataMemoryModeHeap;
+    video_sdk_obj = CreateZoomVideoSDKObj();
+    ZoomVideoSDKInitParams init_params;
+    init_params.domain = "https://go.zoom.us";
+    init_params.enableLog = true;
+    init_params.logFilePrefix = "zoom_videosdk_demo";
+    init_params.videoRawDataMemoryMode = ZoomVideoSDKRawDataMemoryModeHeap;
+    init_params.shareRawDataMemoryMode = ZoomVideoSDKRawDataMemoryModeHeap;
+    init_params.audioRawDataMemoryMode = ZoomVideoSDKRawDataMemoryModeHeap;
+    init_params.enableIndirectRawdata = false;
+
+    ZoomVideoSDKErrors err = video_sdk_obj->initialize(init_params);
+    if (err == ZoomVideoSDKErrors_Success)
+    {
+        printf("Video SDK initialized successfully\n");
+        IZoomVideoSDKDelegate* listener = new ZoomVideoSDKDelegate();
+        video_sdk_obj->addListener(dynamic_cast<IZoomVideoSDKDelegate*>(listener));
+        
+        // Populate device dropdowns immediately after SDK initialization
+        // This allows users to select devices BEFORE joining session
+        populateDeviceDropdowns();
+        printf("Device dropdowns populated before session join\n");
+    }
+    else
+    {
+        printf("Failed to initialize Video SDK, error: %d\n", (int)err);
+        updateStatus("Failed to initialize Video SDK");
+    }
+
     // Set up signal handler
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = my_handler;
@@ -1419,7 +1635,7 @@ int main(int argc, char* argv[])
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     // Initial status
-    updateStatus("Ready to join session");
+    updateStatus("Ready to join session - devices available for selection");
     updateButtonStates();
 
     // Show all widgets
