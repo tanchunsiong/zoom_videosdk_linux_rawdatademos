@@ -18,6 +18,9 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(deps REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 
+# Find ALSA library for audio playback
+find_package(ALSA REQUIRED)
+
 # Try to find GTKmm and SDL2 (optional for GUI)
 pkg_check_modules(GTKMM gtkmm-3.0)
 find_package(SDL2)
@@ -64,6 +67,7 @@ target_link_libraries(${TARGET_NAME}  PkgConfig::deps)
 target_link_libraries(${TARGET_NAME}  videosdk)
 target_link_libraries(${TARGET_NAME}  curl)
 target_link_libraries(${TARGET_NAME}  ${GLIB_LIBRARIES} ${GIO_LIBRARIES})
+target_link_libraries(${TARGET_NAME}  ${ALSA_LIBRARIES})
 
 # Conditionally link GUI libraries
 if(BUILD_GUI)

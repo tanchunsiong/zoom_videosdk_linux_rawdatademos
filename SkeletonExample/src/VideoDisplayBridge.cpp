@@ -24,12 +24,24 @@ VideoDisplayBridge::VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* r
     }
     
     if (user_ && user_->GetVideoPipe()) {
-        user_->GetVideoPipe()->subscribe(ZoomVideoSDKResolution_720P, this);
-        list_.push_back(this);
+        // Try different resolutions for better compatibility
+        ZoomVideoSDKResolution resolution = ZoomVideoSDKResolution_360P; // Start with lower resolution
         if (isLocalUser) {
-            std::cout << "VideoDisplayBridge: Subscribed to self video for user " << user_->getUserName() << std::endl;
+            resolution = ZoomVideoSDKResolution_720P; // Higher resolution for self video
+        }
+        
+        bool subscribed = user_->GetVideoPipe()->subscribe(resolution, this);
+        if (subscribed) {
+            list_.push_back(this);
+            if (isLocalUser) {
+                std::cout << "VideoDisplayBridge: Successfully subscribed to self video for user " << user_->getUserName() 
+                         << " at resolution " << (int)resolution << std::endl;
+            } else {
+                std::cout << "VideoDisplayBridge: Successfully subscribed to remote video for user " << user_->getUserName() 
+                         << " at resolution " << (int)resolution << std::endl;
+            }
         } else {
-            std::cout << "VideoDisplayBridge: Subscribed to remote video for user " << user_->getUserName() << std::endl;
+            std::cout << "VideoDisplayBridge: Failed to subscribe to video for user " << user_->getUserName() << std::endl;
         }
     } else {
         std::cout << "VideoDisplayBridge: No video pipe available for user " << (user_ ? user_->getUserName() : "unknown") << std::endl;

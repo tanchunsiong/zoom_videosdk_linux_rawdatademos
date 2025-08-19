@@ -9,9 +9,123 @@
 #include <stdlib.h>
 #include <sstream>
 #include <thread>
+#include <map>
+#include <ctime>
+#include <alsa/asoundlib.h>
 
 #include "glib.h"
 #include "json.hpp"
+
+// Simple audio playback class using ALSA
+class AudioPlayback {
+private:
+    snd_pcm_t* pcm_handle;
+    bool initialized;
+    
+public:
+    AudioPlayback() : pcm_handle(nullptr), initialized(false) {}
+    
+    ~AudioPlayback() {
+        cleanup();
+    }
+    
+    bool init() {
+        int err;
+        
+        // Open PCM device for playback
+        err = snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+        if (err < 0) {
+            printf("Failed to open PCM device: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        // Set hardware parameters
+        snd_pcm_hw_params_t* hw_params;
+        snd_pcm_hw_params_alloca(&hw_params);
+        
+        err = snd_pcm_hw_params_any(pcm_handle, hw_params);
+        if (err < 0) {
+            printf("Failed to initialize hw_params: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        // Set access type
+        err = snd_pcm_hw_params_set_access(pcm_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+        if (err < 0) {
+            printf("Failed to set access type: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        // Set sample format (16-bit signed)
+        err = snd_pcm_hw_params_set_format(pcm_handle, hw_params, SND_PCM_FORMAT_S16_LE);
+        if (err < 0) {
+            printf("Failed to set sample format: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        // Set sample rate (44.1kHz)
+        unsigned int rate = 44100;
+        err = snd_pcm_hw_params_set_rate_near(pcm_handle, hw_params, &rate, 0);
+        if (err < 0) {
+            printf("Failed to set sample rate: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        // Set number of channels (stereo)
+        err = snd_pcm_hw_params_set_channels(pcm_handle, hw_params, 2);
+        if (err < 0) {
+            printf("Failed to set channel count: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        // Apply hardware parameters
+        err = snd_pcm_hw_params(pcm_handle, hw_params);
+        if (err < 0) {
+            printf("Failed to set hw params: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        // Prepare the PCM device
+        err = snd_pcm_prepare(pcm_handle);
+        if (err < 0) {
+            printf("Failed to prepare PCM device: %s\n", snd_strerror(err));
+            return false;
+        }
+        
+        initialized = true;
+        printf("Audio playback initialized successfully\n");
+        return true;
+    }
+    
+    void playAudio(const char* buffer, int buffer_len) {
+        if (!initialized || !pcm_handle || !buffer) return;
+        
+        // Convert buffer length to frames (assuming 16-bit stereo)
+        int frames = buffer_len / 4; // 2 bytes per sample * 2 channels
+        
+        snd_pcm_sframes_t written = snd_pcm_writei(pcm_handle, buffer, frames);
+        if (written < 0) {
+            // Handle underrun
+            if (written == -EPIPE) {
+                printf("Audio underrun occurred, recovering...\n");
+                snd_pcm_prepare(pcm_handle);
+            } else {
+                printf("Audio write error: %s\n", snd_strerror(written));
+            }
+        }
+    }
+    
+    void cleanup() {
+        if (pcm_handle) {
+            snd_pcm_close(pcm_handle);
+            pcm_handle = nullptr;
+        }
+        initialized = false;
+    }
+};
+
+// Global audio playback instance
+AudioPlayback* g_audio_playback = nullptr;
 
 // Conditionally include GUI headers
 #if BUILD_GUI
@@ -48,7 +162,7 @@ bool getSignatureFromWebService = true;
 
 // Global variables
 bool g_in_session = false;
-bool g_audio_muted = true;
+bool g_audio_muted = false;  // Start with audio unmuted
 bool g_video_muted = false;
 
 #if BUILD_GUI
@@ -225,7 +339,14 @@ void setupSelfVideo()
         if (myself)
         {
             printf("Setting up self video display for user: %s\n", myself->getUserName());
-            // Create a video bridge for self video (this will handle both display and transmission)
+            
+            // Clean up any existing self video bridge first
+            VideoDisplayBridge::stop_display_for(myself);
+            
+            // Small delay to ensure cleanup is complete
+            usleep(100000); // 100ms delay
+            
+            // Create a video bridge for self video display only
             VideoDisplayBridge* self_bridge = new VideoDisplayBridge(myself, g_self_video_renderer);
         }
     }
@@ -408,6 +529,16 @@ public:
 	{
 		printf("Joined session successfully\n");
 		
+		// Initialize audio playback system
+		if (!g_audio_playback) {
+			g_audio_playback = new AudioPlayback();
+			if (!g_audio_playback->init()) {
+				printf("Failed to initialize audio playback\n");
+				delete g_audio_playback;
+				g_audio_playback = nullptr;
+			}
+		}
+		
 		// Update UI on main thread
 		g_idle_add([](gpointer data) -> gboolean {
 			g_in_session = true;
@@ -438,6 +569,13 @@ public:
 	virtual void onSessionLeave()
 	{
 		printf("Left session.\n");
+		
+		// Clean up audio playback system
+		if (g_audio_playback) {
+			printf("Cleaning up audio playback system\n");
+			delete g_audio_playback;
+			g_audio_playback = nullptr;
+		}
 		
 		// Update UI on main thread
 		g_idle_add([](gpointer data) -> gboolean {
@@ -527,10 +665,27 @@ public:
 				if (user && user != myself) // Only handle remote users, not myself
 				{
 					printf("Video status changed for remote user: %s\n", user->getUserName());
-					// For now, we'll recreate the bridge when video status changes
-					// This ensures we capture video when users turn their camera on
-					VideoDisplayBridge::stop_display_for(user);
-					VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_remote_video_renderer);
+					
+					// Check if user has video enabled
+					if (user->GetVideoPipe()) {
+						// Only create bridge if one doesn't exist already
+						bool bridgeExists = false;
+						// Check if bridge already exists (simplified check)
+						// In a more robust implementation, you'd maintain a proper registry
+						printf("User %s has video pipe available, ensuring video bridge exists\n", user->getUserName());
+						
+						// For now, we'll still recreate but with a delay to prevent rapid recreation
+						static std::map<IZoomVideoSDKUser*, time_t> lastUpdate;
+						time_t now = time(nullptr);
+						if (lastUpdate.find(user) == lastUpdate.end() || (now - lastUpdate[user]) > 2) {
+							VideoDisplayBridge::stop_display_for(user);
+							VideoDisplayBridge* bridge = new VideoDisplayBridge(user, g_remote_video_renderer);
+							lastUpdate[user] = now;
+						}
+					} else {
+						printf("User %s has no video pipe, stopping video display\n", user->getUserName());
+						VideoDisplayBridge::stop_display_for(user);
+					}
 				}
 				else if (user == myself)
 				{
@@ -615,14 +770,61 @@ public:
 	}
 
 	virtual void onMixedAudioRawDataReceived(AudioRawData* data_) {
+		if (data_ && g_audio_playback) {
+			printf("Mixed audio received: buffer size %d bytes\n", data_->GetBufferLen());
+			
+			// Process mixed audio data here
+			// This contains audio from all participants mixed together
+			char* buffer = data_->GetBuffer();
+			if (buffer) {
+				// Route received audio to ALSA playback system
+				g_audio_playback->playAudio(buffer, data_->GetBufferLen());
+				
+				static int audio_frame_count = 0;
+				if (++audio_frame_count % 100 == 0) { // Log every 100 frames
+					printf("Processed %d mixed audio frames\n", audio_frame_count);
+				}
+			}
+		}
 	};
 
 
 	virtual void onOneWayAudioRawDataReceived(AudioRawData* data_, IZoomVideoSDKUser* pUser) {
-
+		if (data_ && pUser && g_audio_playback) {
+			printf("One-way audio received from %s: buffer size %d bytes\n", 
+				   pUser->getUserName(), data_->GetBufferLen());
+			
+			// Process individual user audio data here
+			char* buffer = data_->GetBuffer();
+			if (buffer) {
+				// Route received audio to ALSA playback system
+				g_audio_playback->playAudio(buffer, data_->GetBufferLen());
+				
+				static int user_audio_frame_count = 0;
+				if (++user_audio_frame_count % 100 == 0) { // Log every 100 frames
+					printf("Processed %d user audio frames from %s\n", user_audio_frame_count, pUser->getUserName());
+				}
+			}
+		}
 	};
 
-	virtual void onSharedAudioRawDataReceived(AudioRawData* data_) {};
+	virtual void onSharedAudioRawDataReceived(AudioRawData* data_) {
+		if (data_ && g_audio_playback) {
+			printf("Shared audio received: buffer size %d bytes\n", data_->GetBufferLen());
+			
+			// Process shared audio data here (screen sharing audio)
+			char* buffer = data_->GetBuffer();
+			if (buffer) {
+				// Route received audio to ALSA playback system
+				g_audio_playback->playAudio(buffer, data_->GetBufferLen());
+				
+				static int shared_audio_frame_count = 0;
+				if (++shared_audio_frame_count % 100 == 0) { // Log every 100 frames
+					printf("Processed %d shared audio frames\n", shared_audio_frame_count);
+				}
+			}
+		}
+	};
 
 
 	virtual void onUserManagerChanged(IZoomVideoSDKUser* pUser) {};
@@ -752,7 +954,7 @@ void joinVideoSDKSession(std::string& session_name, std::string& session_psw, st
 	session_context.token = session_token.c_str();
 	session_context.videoOption.localVideoOn = true;
 	session_context.audioOption.connect = true;
-	session_context.audioOption.mute = true;
+	session_context.audioOption.mute = false;  // Start with audio unmuted
 
 
 	//join the session
