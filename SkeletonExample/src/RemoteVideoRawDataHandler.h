@@ -11,7 +11,7 @@ public:
     RemoteVideoRawDataHandler(VideoRenderer* renderer);
     ~RemoteVideoRawDataHandler();
 
-    bool SubscribeToUser(IZoomVideoSDKUser* user);
+    bool SubscribeToUser(IZoomVideoSDKUser* user, ZoomVideoSDKResolution resolution = ZoomVideoSDKResolution_90P);
     void Unsubscribe();
     bool IsSubscribed() const { return is_subscribed_; }
     IZoomVideoSDKUser* GetCurrentUser() const { return current_user_; }

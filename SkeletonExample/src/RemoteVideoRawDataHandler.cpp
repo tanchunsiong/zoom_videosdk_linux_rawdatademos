@@ -15,7 +15,7 @@ RemoteVideoRawDataHandler::~RemoteVideoRawDataHandler()
     std::cout << "RemoteVideoRawDataHandler: Destroyed handler instance" << std::endl;
 }
 
-bool RemoteVideoRawDataHandler::SubscribeToUser(IZoomVideoSDKUser* user)
+bool RemoteVideoRawDataHandler::SubscribeToUser(IZoomVideoSDKUser* user, ZoomVideoSDKResolution resolution)
 {
     if (!user || !video_renderer_)
     {
@@ -34,19 +34,20 @@ bool RemoteVideoRawDataHandler::SubscribeToUser(IZoomVideoSDKUser* user)
         return false;
     }
 
-    // Subscribe to raw data from the video pipe
-    ZoomVideoSDKErrors err = video_pipe_->subscribe(ZoomVideoSDKResolution_720P, this);
+    // Subscribe to raw data from the video pipe with specified resolution
+    ZoomVideoSDKErrors err = video_pipe_->subscribe(resolution, this);
     if (err == ZoomVideoSDKErrors_Success)
     {
         current_user_ = user;
         is_subscribed_ = true;
-        std::cout << "RemoteVideoRawDataHandler: Successfully subscribed to raw data for user " << user->getUserName() << std::endl;
+        std::cout << "RemoteVideoRawDataHandler: Successfully subscribed to raw data for user " << user->getUserName() 
+                  << " at resolution " << (int)resolution << std::endl;
         return true;
     }
     else
     {
         std::cout << "RemoteVideoRawDataHandler: Failed to subscribe to raw data for user " << user->getUserName() 
-                  << ", error: " << (int)err << std::endl;
+                  << " at resolution " << (int)resolution << ", error: " << (int)err << std::endl;
         video_pipe_ = nullptr;
         return false;
     }

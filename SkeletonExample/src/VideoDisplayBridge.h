@@ -11,10 +11,15 @@ class VideoDisplayBridge : private IZoomVideoSDKRawDataPipeDelegate
 public:
     VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* renderer);
     VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* renderer, bool isShareScreen);
+    VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* renderer, ZoomVideoSDKResolution resolution);
     ~VideoDisplayBridge();
 
     static void stop_display_for(IZoomVideoSDKUser* user);
     static void stop_display_for(IZoomVideoSDKUser* user, bool isShareScreen);
+    
+    // Method to change resolution dynamically
+    bool ChangeResolution(ZoomVideoSDKResolution newResolution);
+    ZoomVideoSDKResolution GetCurrentResolution() const { return current_resolution_; }
 
 private:
     virtual void onRawDataFrameReceived(YUVRawDataI420* data) override;
@@ -28,4 +33,5 @@ private:
     IZoomVideoSDKUser* user_;
     VideoRenderer* video_renderer_;
     bool is_share_screen_;
+    ZoomVideoSDKResolution current_resolution_;
 };

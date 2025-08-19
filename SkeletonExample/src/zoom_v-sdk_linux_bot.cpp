@@ -189,6 +189,7 @@ Gtk::DrawingArea* g_remote_video_drawing_area = nullptr;
 Gtk::ComboBoxText* g_camera_combo = nullptr;
 Gtk::ComboBoxText* g_microphone_combo = nullptr;
 Gtk::ComboBoxText* g_speaker_combo = nullptr;
+Gtk::ComboBoxText* g_resolution_combo = nullptr;
 
 // Windows-like video management - separate renderers for display only
 ZoomVideoRenderer* g_self_video_zoom_renderer = nullptr;
@@ -620,6 +621,71 @@ void on_speaker_changed()
         }
     }
 }
+
+void on_resolution_changed()
+{
+    if (!video_sdk_obj || !g_resolution_combo || !g_in_session) return;
+    
+    std::string selectedId = g_resolution_combo->get_active_id();
+    std::string selectedText = g_resolution_combo->get_active_text();
+    if (!selectedId.empty())
+    {
+        // Convert string ID to ZoomVideoSDKResolution enum
+        ZoomVideoSDKResolution resolution = static_cast<ZoomVideoSDKResolution>(std::stoi(selectedId));
+        
+        printf("Resolution changed to: %s (enum value: %d)\n", selectedText.c_str(), (int)resolution);
+        
+        // Apply resolution change to remote video if active
+        if (g_remote_video_raw_handler && g_remote_video_enabled)
+        {
+            printf("Applying resolution change to active remote video subscription\n");
+            
+            // Get the current remote user
+            IZoomVideoSDKSession* session = video_sdk_obj->getSessionInfo();
+            if (session)
+            {
+                IZoomVideoSDKUser* myself = session->getMyself();
+                IVideoSDKVector<IZoomVideoSDKUser*>* userList = session->getRemoteUsers();
+                if (userList)
+                {
+                    int count = userList->GetCount();
+                    for (int index = 0; index < count; index++)
+                    {
+                        IZoomVideoSDKUser* user = userList->GetItem(index);
+                        if (user && user != myself && user->GetVideoPipe())
+                        {
+                            printf("Changing resolution for remote user: %s\n", user->getUserName());
+                            
+                            // Unsubscribe from current resolution
+                            g_remote_video_raw_handler->Unsubscribe();
+                            delete g_remote_video_raw_handler;
+                            g_remote_video_raw_handler = nullptr;
+                            
+                            // Create new handler with new resolution
+                            if (g_remote_video_renderer) {
+                                g_remote_video_raw_handler = new RemoteVideoRawDataHandler(g_remote_video_renderer);
+                                
+                                // Subscribe with new resolution
+                                if (g_remote_video_raw_handler->SubscribeToUser(user, resolution)) {
+                                    printf("Successfully changed remote video resolution to %s\n", selectedText.c_str());
+                                } else {
+                                    printf("Failed to change remote video resolution to %s\n", selectedText.c_str());
+                                    delete g_remote_video_raw_handler;
+                                    g_remote_video_raw_handler = nullptr;
+                                }
+                            }
+                            break; // Only handle one user at a time for 1:1 calls
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            printf("No active remote video subscription - resolution will be applied when remote video becomes available\n");
+        }
+    }
+}
 #else
 // Console versions of UI functions
 void updateStatus(const std::string& message)
@@ -826,11 +892,20 @@ public:
 						if (g_remote_video_renderer) {
 							g_remote_video_raw_handler = new RemoteVideoRawDataHandler(g_remote_video_renderer);
 							
-							// Subscribe to remote user's video using raw data callbacks
-							if (g_remote_video_raw_handler->SubscribeToUser(user)) {
-								printf("Successfully subscribed to remote video raw data for user: %s\n", user->getUserName());
+							// Get current resolution setting from dropdown (default to 90P for stability)
+							ZoomVideoSDKResolution resolution = ZoomVideoSDKResolution_90P;
+							if (g_resolution_combo && g_resolution_combo->get_active_row_number() >= 0) {
+								std::string selectedId = g_resolution_combo->get_active_id();
+								if (!selectedId.empty()) {
+									resolution = static_cast<ZoomVideoSDKResolution>(std::stoi(selectedId));
+								}
+							}
+							
+							// Subscribe to remote user's video using raw data callbacks with selected resolution
+							if (g_remote_video_raw_handler->SubscribeToUser(user, resolution)) {
+								printf("Successfully subscribed to remote video raw data for user: %s at resolution %d\n", user->getUserName(), (int)resolution);
 							} else {
-								printf("Failed to subscribe to remote video raw data for user: %s\n", user->getUserName());
+								printf("Failed to subscribe to remote video raw data for user: %s at resolution %d\n", user->getUserName(), (int)resolution);
 								delete g_remote_video_raw_handler;
 								g_remote_video_raw_handler = nullptr;
 							}
@@ -1414,6 +1489,17 @@ int main(int argc, char* argv[])
     speaker_box.pack_start(speaker_combo);
     device_box.pack_start(speaker_box, Gtk::PACK_SHRINK);
 
+    // Resolution selection
+    Gtk::Box resolution_box(Gtk::ORIENTATION_HORIZONTAL, 5);
+    Gtk::Label resolution_label("Resolution:");
+    resolution_label.set_size_request(120, -1);
+    Gtk::ComboBoxText resolution_combo;
+    g_resolution_combo = &resolution_combo;
+    resolution_combo.signal_changed().connect(sigc::ptr_fun(on_resolution_changed));
+    resolution_box.pack_start(resolution_label, Gtk::PACK_SHRINK);
+    resolution_box.pack_start(resolution_combo);
+    device_box.pack_start(resolution_box, Gtk::PACK_SHRINK);
+
     main_box.pack_start(device_frame, Gtk::PACK_SHRINK);
 
     // Create control buttons section
@@ -1619,6 +1705,23 @@ int main(int argc, char* argv[])
         // Populate device dropdowns immediately after SDK initialization
         // This allows users to select devices BEFORE joining session
         populateDeviceDropdowns();
+        
+        // Populate resolution dropdown with available options
+        if (g_resolution_combo) {
+            g_resolution_combo->remove_all();
+            // Add resolution options based on Electron reference analysis
+            // 90P is recommended for stability (from Electron reference)
+            g_resolution_combo->append(std::to_string(ZoomVideoSDKResolution_90P), "90P (Ultra Low - Recommended)");
+            g_resolution_combo->append(std::to_string(ZoomVideoSDKResolution_180P), "180P (Low)");
+            g_resolution_combo->append(std::to_string(ZoomVideoSDKResolution_360P), "360P (Medium)");
+            g_resolution_combo->append(std::to_string(ZoomVideoSDKResolution_720P), "720P (High)");
+            g_resolution_combo->append(std::to_string(ZoomVideoSDKResolution_1080P), "1080P (Full HD)");
+            
+            // Set default to 90P for optimal stability (based on Electron reference)
+            g_resolution_combo->set_active(0);
+            printf("Resolution dropdown populated with 90P as default (recommended for stability)\n");
+        }
+        
         printf("Device dropdowns populated before session join\n");
     }
     else

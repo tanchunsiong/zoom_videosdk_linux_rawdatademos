@@ -24,11 +24,12 @@ VideoDisplayBridge::VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* r
     }
     
     if (user_ && user_->GetVideoPipe()) {
-        // Try different resolutions for better compatibility
-        ZoomVideoSDKResolution resolution = ZoomVideoSDKResolution_360P; // Start with lower resolution
+        // Try different resolutions for better compatibility - using 90P for remote users based on Electron reference
+        ZoomVideoSDKResolution resolution = ZoomVideoSDKResolution_90P; // Start with ultra-low resolution for stability
         if (isLocalUser) {
             resolution = ZoomVideoSDKResolution_720P; // Higher resolution for self video
         }
+        current_resolution_ = resolution;
         
         bool subscribed = user_->GetVideoPipe()->subscribe(resolution, this);
         if (subscribed) {
@@ -53,9 +54,29 @@ VideoDisplayBridge::VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* r
 {
     instance_id_ = instance_count++;
     if (user_ && user_->GetSharePipe()) {
+        current_resolution_ = ZoomVideoSDKResolution_720P;
         user_->GetSharePipe()->subscribe(ZoomVideoSDKResolution_720P, this);
         list_.push_back(this);
         std::cout << "VideoDisplayBridge: Subscribed to share screen for user " << user_->getUserName() << std::endl;
+    }
+}
+
+VideoDisplayBridge::VideoDisplayBridge(IZoomVideoSDKUser* user, VideoRenderer* renderer, ZoomVideoSDKResolution resolution)
+    : user_(user), video_renderer_(renderer), is_share_screen_(false), current_resolution_(resolution)
+{
+    instance_id_ = instance_count++;
+    
+    if (user_ && user_->GetVideoPipe()) {
+        bool subscribed = user_->GetVideoPipe()->subscribe(resolution, this);
+        if (subscribed) {
+            list_.push_back(this);
+            std::cout << "VideoDisplayBridge: Successfully subscribed to video for user " << user_->getUserName() 
+                     << " at custom resolution " << (int)resolution << std::endl;
+        } else {
+            std::cout << "VideoDisplayBridge: Failed to subscribe to video for user " << user_->getUserName() << std::endl;
+        }
+    } else {
+        std::cout << "VideoDisplayBridge: No video pipe available for user " << (user_ ? user_->getUserName() : "unknown") << std::endl;
     }
 }
 
@@ -108,6 +129,45 @@ void VideoDisplayBridge::stop_display_for(IZoomVideoSDKUser* user, bool isShareS
     if (bridge && bridge->is_share_screen_ == isShareScreen) {
         delete bridge;
     }
+}
+
+bool VideoDisplayBridge::ChangeResolution(ZoomVideoSDKResolution newResolution)
+{
+    if (!user_ || is_share_screen_) {
+        std::cout << "VideoDisplayBridge: Cannot change resolution for share screen or invalid user" << std::endl;
+        return false;
+    }
+    
+    if (current_resolution_ == newResolution) {
+        std::cout << "VideoDisplayBridge: Resolution already set to " << (int)newResolution << std::endl;
+        return true;
+    }
+    
+    // Unsubscribe from current resolution
+    if (user_->GetVideoPipe()) {
+        user_->GetVideoPipe()->unSubscribe(this);
+        std::cout << "VideoDisplayBridge: Unsubscribed from current resolution " << (int)current_resolution_ << std::endl;
+    }
+    
+    // Subscribe to new resolution
+    if (user_->GetVideoPipe()) {
+        bool subscribed = user_->GetVideoPipe()->subscribe(newResolution, this);
+        if (subscribed) {
+            current_resolution_ = newResolution;
+            std::cout << "VideoDisplayBridge: Successfully changed resolution to " << (int)newResolution 
+                     << " for user " << user_->getUserName() << std::endl;
+            return true;
+        } else {
+            std::cout << "VideoDisplayBridge: Failed to subscribe to new resolution " << (int)newResolution 
+                     << " for user " << user_->getUserName() << std::endl;
+            
+            // Try to resubscribe to original resolution
+            user_->GetVideoPipe()->subscribe(current_resolution_, this);
+            return false;
+        }
+    }
+    
+    return false;
 }
 
 void VideoDisplayBridge::onRawDataFrameReceived(YUVRawDataI420* data)
