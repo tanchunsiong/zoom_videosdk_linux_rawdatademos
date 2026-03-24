@@ -3,10 +3,9 @@ cmake_minimum_required(VERSION 3.14)
 project(CloudRecordingDemo CXX)
 set(TARGET_NAME CloudRecordingDemo)
 
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g")
-
-add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -27,15 +26,19 @@ link_directories(${GLIB_LIBRARY_DIRS} ${GIO_LIBRARY_DIRS})
 include_directories(${GLIB_INCLUDE_DIRS} ${GIO_INCLUDE_DIRS})
 add_definitions(${GLIB_CFLAGS_OTHER} ${GIO_CFLAGS_OTHER})
 
-add_executable(${TARGET_NAME} 
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/zoom_v-sdk_linux_bot.cpp  
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/WebService.cpp)
+add_executable(${TARGET_NAME}
+    ${CMAKE_CURRENT_SOURCE_DIR}/zoom_v-sdk_linux_bot.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/WebService.cpp
+)
 
-target_link_libraries(${TARGET_NAME}  PkgConfig::deps)
-target_link_libraries(${TARGET_NAME}  videosdk)
-target_link_libraries(${TARGET_NAME}  curl)
-
-target_link_libraries(${TARGET_NAME}  ${GLIB_LIBRARIES} ${GIO_LIBRARIES})
+target_link_libraries(${TARGET_NAME}
+    PRIVATE
+        PkgConfig::deps
+        videosdk
+        curl
+        ${GLIB_LIBRARIES}
+        ${GIO_LIBRARIES}
+)
 
 zoom_video_sdk_stage_config(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 

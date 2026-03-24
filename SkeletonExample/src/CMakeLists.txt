@@ -3,10 +3,9 @@ cmake_minimum_required(VERSION 3.14)
 project(SkeletonDemo CXX)
 set(TARGET_NAME SkeletonDemo)
 
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g")
-
-add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -62,20 +61,24 @@ else()
 endif()
 
 add_executable(${TARGET_NAME} 
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/zoom_v-sdk_linux_bot.cpp  
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/WebService.cpp
-                                 ${GUI_SOURCES})
+    ${CMAKE_CURRENT_SOURCE_DIR}/zoom_v-sdk_linux_bot.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/WebService.cpp
+    ${GUI_SOURCES}
+)
 
-target_link_libraries(${TARGET_NAME}  PkgConfig::deps)
-target_link_libraries(${TARGET_NAME}  videosdk)
-target_link_libraries(${TARGET_NAME}  curl)
-target_link_libraries(${TARGET_NAME}  ${GLIB_LIBRARIES} ${GIO_LIBRARIES})
-target_link_libraries(${TARGET_NAME}  ${ALSA_LIBRARIES})
+target_link_libraries(${TARGET_NAME}
+    PRIVATE
+        PkgConfig::deps
+        videosdk
+        curl
+        ${GLIB_LIBRARIES}
+        ${GIO_LIBRARIES}
+        ${ALSA_LIBRARIES}
+)
 
 # Conditionally link GUI libraries
 if(BUILD_GUI)
-    target_link_libraries(${TARGET_NAME}  ${GTKMM_LIBRARIES})
-    target_link_libraries(${TARGET_NAME}  ${SDL2_LIBRARIES})
+    target_link_libraries(${TARGET_NAME} PRIVATE ${GTKMM_LIBRARIES} ${SDL2_LIBRARIES})
 endif()
 
 zoom_video_sdk_stage_config(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/bin)
