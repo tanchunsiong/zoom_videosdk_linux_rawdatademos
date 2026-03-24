@@ -1,19 +1,16 @@
-#run these in the individual directory's src folder
+# Docker Notes
 
+Each sample has a `Dockerfile-Ubuntu/Dockerfile`, but those Dockerfiles are legacy helpers and have not been revalidated after the repo moved to a shared repo-level `SDK/` layout.
 
-#build Ubuntu
+Current recommendation:
 
-docker build -t vsdk-x.x.x-on-ubuntu -f ../Dockerfile-Ubuntu/Dockerfile .
-docker run -it --rm vsdk-x.x.x-on-ubuntu
+- prefer the native CMake build from the host
+- if you use Docker, make the repo-level `SDK/` available inside the container
+- treat the sample Dockerfiles as starting points, not as guaranteed up-to-date build recipes
 
-#macOS
-docker build --platform linux/amd64 -t vsdk-x.x.x-on-ubuntu -f Dockerfile-Ubuntu/Dockerfile .
-docker run -it --platform linux/amd64  vsdk-x.x.x-on-ubuntu
+If you adapt one of them, use the repo root as the build context so the container can see:
 
-#list all images
-docker images -a
-
-#remove images
-docker rmi 
-
+- `SDK/`
+- `cmake/`
+- the sample source directory
 

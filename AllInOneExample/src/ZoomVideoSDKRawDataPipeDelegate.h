@@ -2,7 +2,7 @@
 #define __STDC_CONSTANT_MACROS
 extern "C"
 {
-#include "libavfilter/avfiltergraph.h"
+#include "libavfilter/avfilter.h"
 #include "libavfilter/buffersink.h"
 #include "libavfilter/buffersrc.h"
 #include "libavutil/avutil.h"
@@ -28,12 +28,14 @@ class ZoomVideoSDKRawDataPipeDelegate :
 {
 	virtual void onRawDataFrameReceived(YUVRawDataI420* data);
 	virtual void onRawDataStatusChanged(RawDataStatus status);
+	virtual void onShareCursorDataReceived(ZoomVideoSDKShareCursorData info);
 	static ZoomVideoSDKRawDataPipeDelegate* find_instance(IZoomVideoSDKUser* user);
 
 	int instance_id_;
 	static int instance_count;
 	static std::vector<ZoomVideoSDKRawDataPipeDelegate*> list_;
 	IZoomVideoSDKUser* user_;
+	IZoomVideoSDKRawDataPipe* pipe_ = nullptr;
 
 	int ffmpeg_start(const char* userName, const char* userID, int sourceID);
 	int ffmpeg_flush(AVFormatContext* fmt_ctx, unsigned int stream_index);
@@ -56,8 +58,8 @@ class ZoomVideoSDKRawDataPipeDelegate :
 	AVFilterContext* buffersrc_ctx;
 	AVFilterGraph* filter_graph;
 	//static int video_stream_index = -1;
-	AVFilter* buffersrc;
-	AVFilter* buffersink;
+	const AVFilter* buffersrc;
+	const AVFilter* buffersink;
 	AVFilterInOut* outputs;
 	AVFilterInOut* inputs;
 	AVBufferSinkParams* buffersink_params;
@@ -96,6 +98,3 @@ public:
 	static void log(const wchar_t* format, ...);
 	static void err_msg(int code);
 };
-
-
-

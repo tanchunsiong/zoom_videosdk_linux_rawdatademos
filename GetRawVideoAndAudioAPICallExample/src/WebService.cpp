@@ -58,7 +58,7 @@ std::string GetSignatureFromWebService(std::string remote_url, std::string sessi
 		std::string json = R"({
     "sessionName": ")" + session_name + R"(",
     "role": ")" + role + R"(",
-    "user_identity": "asdc.cc generated"
+    "user_identity": "sample-generated"
 })";
 
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json.c_str());

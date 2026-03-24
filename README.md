@@ -1,103 +1,147 @@
-This app will join a zoom video sdk session and record each user's video to a separate video file. 
-The code demostrate how to use Zoom Video SDK's Raw Data feature, and how to use FFMPEG lib to encode the Raw Data to a video file. 
+# Zoom Video SDK Linux Raw Data Demos
 
-## Download & Build
+This repository contains Linux Zoom Video SDK sample applications for:
 
-```
+- raw audio and video receive
+- raw audio and video send
+- chat and command channel features
+- callout, cloud recording, live streaming, and statistics
+- a skeleton sample with optional GUI support
+
+## Sample List
+
+- `AllInOneExample` -> `VideoSDKSessionRecorder`
+- `CalloutExample` -> `CalloutDemo`
+- `ChatExample` -> `ChatDemo`
+- `CloudRecordingExample` -> `CloudRecordingDemo`
+- `CommandChannelExample` -> `CommandChannelDemo`
+- `GetRawVideoAndAudioExample` -> `GetRawVideoAndAudioDemo`
+- `GetRawVideoAndAudioAPICallExample` -> `GetRawVideoAndAudioCallAPIDemo`
+- `LanguageTranscriptionAndTranslationExample` -> `LanguageTranscriptionAndTranslationDemo`
+- `LiveStreamingExample` -> `LiveStreamingDemo`
+- `SendRawVideoAndAudioExample` -> `SendRawVideoAndAudioDemo`
+- `SkeletonExample` -> `SkeletonDemo`
+- `StatisticsExample` -> `StatisticsDemo`
+
+Each sample builds from its own `src/` directory and writes its executable to `src/bin/`.
+
+## Fresh Clone Notes
+
+A fresh clone does not contain every local SDK artifact needed for every sample build.
+
+Tracked in git:
+
+- sample source code
+- sample `config.json` templates
+- legacy `ffmpeg.tar.gz` archives in some sample `src/lib/` directories
+
+The Zoom Video SDK itself is now expected from a shared extracted SDK root:
+
+- default path: `SDK/` at the repository root
+- override with `-DZOOM_VIDEO_SDK_ROOT=/path/to/SDK`
+
+The raw-data recording samples build against system FFmpeg development packages via `pkg-config`.
+
+## Prerequisites
+
+Base packages used by most samples:
+
+```bash
 sudo apt update
-sudo apt install -y build-essential gcc cmake
-sudo apt install -y libglib2.0-dev liblzma-dev libxcb-image0 libxcb-keysyms1 libxcb-xfixes0 libxcb-xkb1 libxcb-shape0 libxcb-shm0 libxcb-randr0 libxcb-xtest0 libgbm1 libxtst6 libgl1 libnss3  libasound2 libpulse0
-
-
-mkdir -p ~/.zoom/logs
-cd /root
-git clone https://github.com/tanchunsiong/zoom_v-sdk_linux_bot.git
-cd zoom_v-sdk_linux_bot/
-touch config.json
-echo "{">> config.json
-echo "    \"session_name\": \"chunsiongsession\",">> config.json
-echo "    \"token\": \"xxx.yyy.zzz\",">> config.json
-echo "    \"session_psw\": \"12345678\"">> config.json
-echo "}">> config.json
-cmake -B build
-cd build/
-make
+sudo apt install -y build-essential gcc g++ cmake pkg-config
+sudo apt install -y libglib2.0-dev libcurl4-openssl-dev liblzma-dev
+sudo apt install -y libxcb-image0 libxcb-keysyms1 libxcb-xfixes0 libxcb-xkb1
+sudo apt install -y libxcb-shape0 libxcb-shm0 libxcb-randr0 libxcb-xtest0
+sudo apt install -y libgbm1 libxtst6 libgl1 libnss3 libasound2 libpulse0
+mkdir -p SDK
+tar -xf /path/to/zoom-video-sdk-linux_x86_64-*.tar.xz -C SDK
 ```
 
+After extraction, the repo expects these paths to exist:
 
-## Adding files
+- `SDK/h/zoom_video_sdk_api.h`
+- `SDK/libvideosdk.so`
 
-you will need to add `config.json` in your root directory
-its content will look something like this
+Extra packages for some samples:
+
+- raw-data samples: FFmpeg development packages
+- `SendRawVideoAndAudioExample`: OpenCV
+- `SkeletonExample` GUI mode: `gtkmm-3.0` and `SDL2`
+
+Example:
+
+```bash
+sudo apt install -y libavfilter-dev libavformat-dev libavcodec-dev
+sudo apt install -y libavutil-dev libswscale-dev libswresample-dev
+sudo apt install -y libgtkmm-3.0-dev libsdl2-dev libopencv-dev
 ```
 
+## Build
+
+Build the whole repo:
+
+```bash
+cmake -S . -B build
+cmake --build build -j
+```
+
+Build one sample:
+
+```bash
+cmake -S GetRawVideoAndAudioExample/src -B GetRawVideoAndAudioExample/src/build
+cmake --build GetRawVideoAndAudioExample/src/build -j
+```
+
+If the SDK was extracted somewhere else:
+
+```bash
+cmake -S . -B build -DZOOM_VIDEO_SDK_ROOT=/path/to/SDK
+```
+
+## Configure
+
+Each sample expects its own `src/config.json`. Start by copying `src/config.json.example` to `src/config.json`. Example:
+
+```json
 {
-    "session_name": "chunsiongsession",
-    "token": "xxx.yyy.zzz",
-    "session_psw": "12345678"
+    "session_name": "my-session",
+    "token": "your-video-sdk-token",
+    "session_psw": ""
 }
-
-
 ```
 
-you will also need to add the SDK files (.so files) to /lib/zoom_video_sdk
+If you use the optional web-service token flow, add a repo-level `.env` file:
 
-extract /lib/ffmpeg.tar.gz to /lib/ffmpeg
-extract /lib/qt_libs.tar.gz to /zoom_video_sdk/qt_libs
-
-make a copy of /lib/zoom_video_sdk/libvideosdk.so to /lib/zoom_video_sdk/libvideosdk.so.1
-
-you will also need to add qt_libs into  /lib/zoom_video_sdk/qt_libs
-this is typically double packaged into a tar and gz
-
-## Generate Your JWT
-You much have an account [subscribed](https://marketplace.zoom.us/docs/sdk/video/developer-accounts/) Zoom Video SDK. 
-
-Find your Video SDK [key and secret](https://marketplace.zoom.us/docs/sdk/video/auth/#get-video-sdk-key-and-secret). 
-
-Generate your JWT with [this script](https://gist.github.com/linanw/9144d9bfc84da4076ab5beb04d4f9db1).
-
-## Run 
-Add your JWT to bin/config.json.
-
-Run the app from bin folder:
-```
-./zoom_v-sdk_linux_bot
+```bash
+cat > .env <<'EOF'
+ZOOM_VIDEO_SDK_SIGNATURE_URL=https://your-token-service.example.com/video
+EOF
 ```
 
-## error messages
-ALSA error messages appears to be from the SDK, this might be caused by missing speaker / microphone
+The samples first read `ZOOM_VIDEO_SDK_SIGNATURE_URL` from the process environment, then fall back to a `.env` file by walking upward from the current working directory.
 
+## Run
 
-## walkthru on samples
+Run from the sample `src/bin/` directory. For example:
 
-Here are some boolean variables which you can use to trace the code.
-These wilL demonstrate some of the requirements needed to get / send raw data.
-
-```
-  //these are controls to demonstrate the flow
-    bool getRawAudio = false;
-    bool getRawVideo = false;
-    bool getRawShare = false;
-    bool sendRawVideo = false;
-    bool sendRawAudio = false;
-    bool sendRawShare = true;
+```bash
+cp GetRawVideoAndAudioExample/src/config.json.example GetRawVideoAndAudioExample/src/config.json
+cd GetRawVideoAndAudioExample/src/bin
+./GetRawVideoAndAudioDemo
 ```
 
-for raw audio access to work, here are some high level requirements
-if you are using a normal desktop linux, there is no need for virtualspeaker or PulseAudio
-if you are using a headless linux (wsl, docker, ubuntu server) without soundcard, you will need to use virtualspeaker or PulseAudio
-//needed for audio 
-the above comment in code will help you to find the code segments which are needed
+## JWT
 
-- IZoomVideoSDKVirtualAudioSpeaker
-  - Set this as virtual speaker and virtual mic in session_context before joining
-  - getAudioHelper() when in session, and call subscribe to start callback. 
-    - If you do not call subscribe, there will be no callback for onmixedaudio and ononewayaudio. 
-    - If you do not set the virtual speaker and virtual mic in session_context, there will be no callback for onmixedaudio and ononewayaudio.\
+You need a Zoom Video SDK token for the target session.
 
-##converting PCM to mp3
- `ffmpeg -f s16le -ar 32000 -i output.pcm output.mp3`
+- create or use a Zoom Video SDK app
+- get the SDK key and secret
+- generate a Video SDK JWT/token for your session
+- place the token into the sample `config.json`
 
-## adding files
-if you add additions files (.cpp), do include them in CMakeLists.txt
+## Notes
+
+- `SkeletonExample` builds with a GTK/SDL GUI when those dependencies are present, and falls back to a console build otherwise.
+- ALSA warnings are common on headless Linux systems and may indicate missing audio devices.
+- Raw audio access may require a virtual speaker or PulseAudio on headless machines.
+- If you add new `.cpp` files to a sample, update that sample's `CMakeLists.txt`.

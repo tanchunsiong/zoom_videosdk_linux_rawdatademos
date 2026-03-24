@@ -17,16 +17,14 @@
 **/lib/zoom_video_sdk/libturbojpeg.so
 **/lib/zoom_video_sdk/libvideosdk.so
 **/lib/zoom_video_sdk/libvideosdk.so.1
-#config.json
+**/config.json
+!**/config.json.example
 
 **/out/
 
 #for visual studio 2022
 .vs
 CMakeSettings.json
-
-#config.json
-#config.json
 
 **/include/ffmpeg
 **/include/zoom_video_sdk/helpers
@@ -35,5 +33,9 @@ CMakeSettings.json
 **/lib/zoom_video_sdk/libvideosdk.so
 **/lib/zoom_video_sdk/libvideosdk.so.1
 
+SDK/
+.env/
+.env
+.env.local
 
 **/CMakeFiles/*

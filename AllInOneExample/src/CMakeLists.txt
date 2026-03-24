@@ -17,16 +17,22 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(deps REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(GIO REQUIRED gio-2.0)
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavfilter libavformat libavcodec libavutil libswscale libswresample)
+execute_process(
+    COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=includedir libavfilter
+    OUTPUT_VARIABLE FFMPEG_INCLUDEDIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+include(${CMAKE_CURRENT_LIST_DIR}/../../cmake/ZoomVideoSDK.cmake)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/zoom_video_sdk)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/ffmpeg)
+include_directories(${FFMPEG_INCLUDEDIR})
+zoom_video_sdk_use()
 
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/zoom_video_sdk)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/ffmpeg)
 link_directories(${GLIB_LIBRARY_DIRS} ${GIO_LIBRARY_DIRS})
 include_directories(${GLIB_INCLUDE_DIRS} ${GIO_INCLUDE_DIRS})
-add_definitions(${GLIB_CFLAGS_OTHER} ${GIO_CFLAGS_OTHER})
+add_definitions(${GLIB_CFLAGS_OTHER} ${GIO_CFLAGS_OTHER} ${FFMPEG_CFLAGS_OTHER})
 
 add_executable(${TARGET_NAME} 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/ZoomVideoSDKRawDataPipeDelegate.cpp  
@@ -38,25 +44,14 @@ add_executable(${TARGET_NAME}
                                  ${CMAKE_CURRENT_SOURCE_DIR}/WebService.cpp)
 
 target_link_libraries(${TARGET_NAME}  PkgConfig::deps)
+target_link_libraries(${TARGET_NAME}  PkgConfig::FFMPEG)
 target_link_libraries(${TARGET_NAME}  videosdk)
-target_link_libraries(${TARGET_NAME}  z pthread avformat)
-target_link_libraries(${TARGET_NAME}  z lzma swresample avcodec)
-target_link_libraries(${TARGET_NAME}  avutil)
-target_link_libraries(${TARGET_NAME}  swscale avfilter)
 target_link_libraries(${TARGET_NAME}  curl)
 
 target_link_libraries(${TARGET_NAME}  ${GLIB_LIBRARIES} ${GIO_LIBRARIES})
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.json ${CMAKE_CURRENT_SOURCE_DIR}/bin/config.json COPYONLY)
+zoom_video_sdk_stage_config(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/lib/zoom_video_sdk/ DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/ffmpeg")
-    execute_process(COMMAND mkdir -p ${CMAKE_CURRENT_SOURCE_DIR}/lib/ffmpeg COMMAND tar -xf ${CMAKE_CURRENT_SOURCE_DIR}/lib/ffmpeg.tar.gz -C lib/ffmpeg WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
-
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/zoom_video_sdk/qt_libs")
-    execute_process(COMMAND tar -xf ${CMAKE_CURRENT_SOURCE_DIR}/lib/qt_libs.tar.gz -C lib/zoom_video_sdk WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
+zoom_video_sdk_stage_runtime(${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 execute_process(COMMAND mkdir -p .zoom/logs WORKING_DIRECTORY $ENV{HOME})

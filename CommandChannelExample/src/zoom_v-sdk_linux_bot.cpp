@@ -25,6 +25,7 @@
 
 
 #include "WebService.h"
+#include "DotEnv.h"
 
 using Json = nlohmann::json;
 USING_ZOOM_VIDEO_SDK_NAMESPACE
@@ -283,6 +284,40 @@ virtual void onAnnotationHelperCleanUp(IZoomVideoSDKAnnotationHelper* helper) {}
 virtual void onAnnotationPrivilegeChange(IZoomVideoSDKUser* pUser, bool enable) {};
 virtual void onAnnotationHelperActived(void* handle) {};
 virtual void onVideoAlphaChannelStatusChanged(bool isAlphaModeOn) {};
+virtual void onSessionLeave(ZoomVideoSDKSessionLeaveReason eReason) {}
+virtual void onUserShareStatusChanged(IZoomVideoSDKShareHelper* pShareHelper, IZoomVideoSDKUser* pUser, IZoomVideoSDKShareAction* pShareAction) {}
+virtual void onShareContentChanged(IZoomVideoSDKShareHelper* pShareHelper, IZoomVideoSDKUser* pUser, IZoomVideoSDKShareAction* pShareAction) {}
+virtual void onFailedToStartShare(IZoomVideoSDKShareHelper* pShareHelper, IZoomVideoSDKUser* pUser) {}
+virtual void onShareSettingChanged(ZoomVideoSDKShareSetting setting) {}
+virtual void onAudioLevelChanged(unsigned int level, bool bAudioSharing, IZoomVideoSDKUser* pUser) {}
+virtual void onSpokenLanguageChanged(ILiveTranscriptionLanguage* spokenLanguage) {}
+virtual void onShareNetworkStatusChanged(ZoomVideoSDKNetworkStatus shareNetworkStatus, bool isSendingShare) {}
+virtual void onUserNetworkStatusChanged(ZoomVideoSDKDataType type, ZoomVideoSDKNetworkStatus level, IZoomVideoSDKUser* pUser) {}
+virtual void onUserOverallNetworkStatusChanged(ZoomVideoSDKNetworkStatus level, IZoomVideoSDKUser* pUser) {}
+virtual void onAnnotationPrivilegeChange(IZoomVideoSDKUser* pUser, IZoomVideoSDKShareAction* pShareAction) {}
+virtual void onAnnotationToolTypeChanged(IZoomVideoSDKAnnotationHelper* helper, void* handle, ZoomVideoSDKAnnotationToolType toolType) {}
+virtual void onSpotlightVideoChanged(IZoomVideoSDKVideoHelper* pVideoHelper, IVideoSDKVector<IZoomVideoSDKUser*>* userList) {}
+virtual void onBindIncomingLiveStreamResponse(bool bSuccess, const zchar_t* strStreamKeyID) {}
+virtual void onUnbindIncomingLiveStreamResponse(bool bSuccess, const zchar_t* strStreamKeyID) {}
+virtual void onIncomingLiveStreamStatusResponse(bool bSuccess, IVideoSDKVector<IncomingLiveStreamStatus>* pStreamsStatusList) {}
+virtual void onStartIncomingLiveStreamResponse(bool bSuccess, const zchar_t* strStreamKeyID) {}
+virtual void onStopIncomingLiveStreamResponse(bool bSuccess, const zchar_t* strStreamKeyID) {}
+virtual void onShareContentSizeChanged(IZoomVideoSDKShareHelper* pShareHelper, IZoomVideoSDKUser* pUser, IZoomVideoSDKShareAction* pShareAction) {}
+virtual void onUnsharingWindowsChanged(IVideoSDKVector<void*>* windowsList, IZoomVideoSDKShareHelper* pShareHelper, IZoomVideoSDKUser* pUser, IZoomVideoSDKShareAction* pShareAction) {}
+virtual void onSharingActiveMonitorChanged(IVideoSDKVector<void*>* monitorIDs, IZoomVideoSDKShareHelper* pShareHelper, IZoomVideoSDKUser* pUser, IZoomVideoSDKShareAction* pShareAction) {}
+virtual void onSubSessionStatusChanged(ZoomVideoSDKSubSessionStatus status, IVideoSDKVector<ISubSessionKit*>* pSubSessionKitList) {}
+virtual void onSubSessionManagerHandle(IZoomVideoSDKSubSessionManager* pManager) {}
+virtual void onSubSessionParticipantHandle(IZoomVideoSDKSubSessionParticipant* pParticipant) {}
+virtual void onSubSessionUsersUpdate(ISubSessionKit* pSubSessionKit) {}
+virtual void onBroadcastMessageFromMainSession(const zchar_t* sMessage, const zchar_t* sUserName) {}
+virtual void onSubSessionUserHelpRequest(ISubSessionUserHelpRequestHandler* pHandler) {}
+virtual void onSubSessionUserHelpRequestResult(ZoomVideoSDKUserHelpRequestResult eResult) {}
+virtual void onStartBroadcastResponse(bool bSuccess, const zchar_t* channelID) {}
+virtual void onStopBroadcastResponse(bool bSuccess) {}
+virtual void onGetBroadcastControlStatus(bool bSuccess, ZoomVideoSDKBroadcastControlStatus status) {}
+virtual void onStreamingJoinStatusChanged(ZoomVideoSDKStreamingJoinStatus status) {}
+virtual void onCanvasSnapshotTaken(IZoomVideoSDKUser* pUser, bool isShare) {}
+virtual void onCanvasSnapshotIncompatible(IZoomVideoSDKUser* pUser) {}
 };
 
 
@@ -292,7 +327,7 @@ void joinVideoSDKSession(std::string& session_name, std::string& session_psw, st
 	ZoomVideoSDKRawDataMemoryMode heap = ZoomVideoSDKRawDataMemoryMode::ZoomVideoSDKRawDataMemoryModeHeap;
 	video_sdk_obj = CreateZoomVideoSDKObj();
 	ZoomVideoSDKInitParams init_params;
-	init_params.domain = "https://go.zoom.us";
+	init_params.domain = "https://zoom.us";
 	init_params.enableLog = true;
 	init_params.logFilePrefix = "zoom_videosdk_demo";
 	init_params.videoRawDataMemoryMode = ZoomVideoSDKRawDataMemoryModeHeap;
@@ -407,8 +442,12 @@ int main(int argc, char* argv[])
 	}
 
 	if (getSignatureFromWebService) {
-		session_token = GetSignatureFromWebService("https://asdc.cc/video", session_name, "1");
-		printf("JWT from webservice is %s\n", session_token.c_str());
+		const std::string signature_url = sample_env::FindEnvValue("ZOOM_VIDEO_SDK_SIGNATURE_URL");
+		if (signature_url.empty()) {
+			fprintf(stderr, "ZOOM_VIDEO_SDK_SIGNATURE_URL is not set. Define it in .env or the process environment.\n");
+			return 1;
+		}
+		session_token = GetSignatureFromWebService(signature_url, session_name, "1");
 
 	}
 

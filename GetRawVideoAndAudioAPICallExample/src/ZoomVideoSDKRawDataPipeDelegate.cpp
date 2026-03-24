@@ -1,5 +1,6 @@
 
 #include "ZoomVideoSDKRawDataPipeDelegate.h"
+#include "helpers/zoom_video_sdk_share_helper_interface.h"
 
 using namespace ZOOMVIDEOSDK;
 
@@ -11,7 +12,11 @@ ZoomVideoSDKRawDataPipeDelegate::ZoomVideoSDKRawDataPipeDelegate(IZoomVideoSDKUs
 {
 	instance_id_ = instance_count++;
 	user_ = user;
-	user_->GetVideoPipe()->subscribe(ZoomVideoSDKResolution_360P, this);
+	pipe_ = user_->GetVideoPipe();
+	if (pipe_)
+	{
+		pipe_->subscribe(ZoomVideoSDKResolution_360P, this);
+	}
 	list_.push_back(this);
 }
 
@@ -19,7 +24,20 @@ ZoomVideoSDKRawDataPipeDelegate::ZoomVideoSDKRawDataPipeDelegate(IZoomVideoSDKUs
 {
 	instance_id_ = instance_count++;
 	user_ = user;
-	user_->GetSharePipe()->subscribe(ZoomVideoSDKResolution_360P, this);
+	(void)isShareScreen;
+	IVideoSDKVector<IZoomVideoSDKShareAction*>* share_actions = user_->getShareActionList();
+	if (share_actions && share_actions->GetCount() > 0)
+	{
+		IZoomVideoSDKShareAction* share_action = share_actions->GetItem(0);
+		if (share_action)
+		{
+			pipe_ = share_action->getSharePipe();
+		}
+	}
+	if (pipe_)
+	{
+		pipe_->subscribe(ZoomVideoSDKResolution_360P, this);
+	}
 	list_.push_back(this);
 }
 
@@ -32,9 +50,13 @@ ZoomVideoSDKRawDataPipeDelegate::~ZoomVideoSDKRawDataPipeDelegate()
 		ffmpeg_stop();
 		is_ffmpeg_encoding_on = 0;
 	}
-	user_->GetVideoPipe()->unSubscribe(this);
+	if (pipe_)
+	{
+		pipe_->unSubscribe(this);
+	}
 	log(L"********** [%d] UnSubscribe, user: %s.\n", instance_id_, user_->getUserName());
 	instance_count--;
+	pipe_ = nullptr;
 	user_ = nullptr;
 }
 
@@ -131,6 +153,11 @@ void ZoomVideoSDKRawDataPipeDelegate::onRawDataStatusChanged(RawDataStatus statu
 	else
 	{
 	}
+}
+
+void ZoomVideoSDKRawDataPipeDelegate::onShareCursorDataReceived(ZoomVideoSDKShareCursorData info)
+{
+	(void)info;
 }
 
 void ZoomVideoSDKRawDataPipeDelegate::err_msg(int code)
@@ -450,7 +477,7 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_flush(AVFormatContext *fmt_ctx, unsi
 	int got_frame;
 	AVPacket enc_pkt;
 	if (!(fmt_ctx->streams[stream_index]->codec->codec->capabilities &
-		  CODEC_CAP_DELAY))
+		  AV_CODEC_CAP_DELAY))
 		return 0;
 	while (1)
 	{
