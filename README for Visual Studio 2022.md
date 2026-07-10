@@ -1,6 +1,6 @@
 # Visual Studio 2022 on WSL
 
-For Visual Studio 2022 with a Ubuntu 22 WSL target, install:
+For Visual Studio 2022 with an Ubuntu 22.04 WSL target, install:
 
 ```bash
 sudo apt-get update

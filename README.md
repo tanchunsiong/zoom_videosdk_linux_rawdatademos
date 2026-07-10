@@ -10,18 +10,18 @@ This repository contains Linux Zoom Video SDK sample applications for:
 
 ## Sample List
 
-- `AllInOneExample` -> `VideoSDKSessionRecorder`
-- `CalloutExample` -> `CalloutDemo`
-- `ChatExample` -> `ChatDemo`
-- `CloudRecordingExample` -> `CloudRecordingDemo`
-- `CommandChannelExample` -> `CommandChannelDemo`
-- `GetRawVideoAndAudioExample` -> `GetRawVideoAndAudioDemo`
-- `GetRawVideoAndAudioAPICallExample` -> `GetRawVideoAndAudioCallAPIDemo`
-- `LanguageTranscriptionAndTranslationExample` -> `LanguageTranscriptionAndTranslationDemo`
-- `LiveStreamingExample` -> `LiveStreamingDemo`
-- `SendRawVideoAndAudioExample` -> `SendRawVideoAndAudioDemo`
-- `SkeletonExample` -> `SkeletonDemo`
-- `StatisticsExample` -> `StatisticsDemo`
+- `AllInOneExample` -> `VideoSDKSessionRecorder`: combines raw-data receive/send and optional chat, command channel, streaming, recording, callout, transcription, and statistics controls
+- `CalloutExample` -> `CalloutDemo`: demonstrates inviting a participant by phone
+- `ChatExample` -> `ChatDemo`: sends chat messages and handles chat callbacks
+- `CloudRecordingExample` -> `CloudRecordingDemo`: starts cloud recording and handles recording status callbacks
+- `CommandChannelExample` -> `CommandChannelDemo`: connects to the command channel and sends and receives commands
+- `GetRawVideoAndAudioExample` -> `GetRawVideoAndAudioDemo`: subscribes to raw audio, video, and share data and writes received media to files
+- `GetRawVideoAndAudioAPICallExample` -> `GetRawVideoAndAudioCallAPIDemo`: captures raw media and demonstrates sending recorded audio to the Deepgram API
+- `LanguageTranscriptionAndTranslationExample` -> `LanguageTranscriptionAndTranslationDemo`: starts live transcription and handles transcription callbacks; translation language selection is present but currently disabled
+- `LiveStreamingExample` -> `LiveStreamingDemo`: starts a custom RTMP live stream and handles streaming status callbacks
+- `SendRawVideoAndAudioExample` -> `SendRawVideoAndAudioDemo`: sends raw video, audio, and share data through virtual sources
+- `SkeletonExample` -> `SkeletonDemo`: provides a starter application with optional GTK/SDL video rendering and a console fallback
+- `StatisticsExample` -> `StatisticsDemo`: queries session audio, video, and share statistics
 
 Each sample builds from its own `src/` directory and writes its executable to `src/bin/`.
 
@@ -32,8 +32,8 @@ A fresh clone does not contain every local SDK artifact needed for every sample 
 Tracked in git:
 
 - sample source code
-- sample `config.json` templates
-- legacy `ffmpeg.tar.gz` archives in some sample `src/lib/` directories
+- sample `config.json.example` templates
+- legacy `ffmpeg.tar.gz` archives in the sample `src/lib/` directories
 
 The Zoom Video SDK itself is now expected from a shared extracted SDK root:
 
@@ -52,15 +52,21 @@ sudo apt install -y build-essential gcc g++ cmake pkg-config
 sudo apt install -y libglib2.0-dev libcurl4-openssl-dev liblzma-dev
 sudo apt install -y libxcb-image0 libxcb-keysyms1 libxcb-xfixes0 libxcb-xkb1
 sudo apt install -y libxcb-shape0 libxcb-shm0 libxcb-randr0 libxcb-xtest0
-sudo apt install -y libgbm1 libxtst6 libgl1 libnss3 libasound2 libpulse0
+sudo apt install -y libgbm1 libxtst6 libgl1 libnss3 libasound2-dev libpulse0
 mkdir -p SDK
-tar -xf /path/to/zoom-video-sdk-linux_x86_64-*.tar.xz -C SDK
+tar -xf /path/to/zoom-video-sdk-linux_x86_64-*.tar.xz -C SDK --strip-components=1
 ```
 
-After extraction, the repo expects these paths to exist:
+The Zoom archive contains a versioned top-level directory. `--strip-components=1` places the SDK contents directly in this repo's `SDK/` folder instead of creating another directory inside it.
+
+After extraction, this repo expects these paths to exist:
 
 - `SDK/h/zoom_video_sdk_api.h`
 - `SDK/libvideosdk.so`
+- `SDK/libcml.so`
+- `SDK/libmpg123.so`
+
+Keep the other package contents, including `qt_libs/` and `cpthost` when supplied by the SDK version, in the same `SDK/` folder.
 
 Extra packages for some samples:
 
@@ -100,7 +106,7 @@ cmake -S . -B build -DZOOM_VIDEO_SDK_ROOT=/path/to/SDK
 
 ## Configure
 
-Each sample expects its own `src/config.json`. Start by copying `src/config.json.example` to `src/config.json`. Example:
+Each sample expects its own `src/config.json`. Start by copying that sample's `src/config.json.example` to `src/config.json`. Example:
 
 ```json
 {
@@ -110,7 +116,9 @@ Each sample expects its own `src/config.json`. Start by copying `src/config.json
 }
 ```
 
-If you use the optional web-service token flow, add a repo-level `.env` file:
+Create or update `config.json` before configuring the sample. CMake copies it into `src/bin/`; if no local config exists, it copies `config.json.example` as the runtime `config.json` instead.
+
+If a sample has `getSignatureFromWebService` enabled, add a repo-level `.env` file:
 
 ```bash
 cat > .env <<'EOF'
@@ -118,7 +126,7 @@ ZOOM_VIDEO_SDK_SIGNATURE_URL=https://your-token-service.example.com/video
 EOF
 ```
 
-The samples first read `ZOOM_VIDEO_SDK_SIGNATURE_URL` from the process environment, then fall back to a `.env` file by walking upward from the current working directory.
+Those samples first read `ZOOM_VIDEO_SDK_SIGNATURE_URL` from the process environment, then fall back to a `.env` file by walking upward from the current working directory. Set `getSignatureFromWebService` to `false` and rebuild when using only the token from `config.json`.
 
 ## Run
 
@@ -126,6 +134,8 @@ Run from the sample `src/bin/` directory. For example:
 
 ```bash
 cp GetRawVideoAndAudioExample/src/config.json.example GetRawVideoAndAudioExample/src/config.json
+cmake -S GetRawVideoAndAudioExample/src -B GetRawVideoAndAudioExample/src/build
+cmake --build GetRawVideoAndAudioExample/src/build -j
 cd GetRawVideoAndAudioExample/src/bin
 ./GetRawVideoAndAudioDemo
 ```

@@ -13,6 +13,17 @@ From the repo root, extract the Linux Video SDK so these paths exist:
 
 - `SDK/h/zoom_video_sdk_api.h`
 - `SDK/libvideosdk.so`
+- `SDK/libcml.so`
+- `SDK/libmpg123.so`
+
+The downloaded archive contains a versioned top-level directory. Extract its contents directly into the repository-level `SDK/` folder:
+
+```bash
+mkdir -p SDK
+tar -xf /path/to/zoom-video-sdk-linux_x86_64-*.tar.xz -C SDK --strip-components=1
+```
+
+Keep `qt_libs/` and `cpthost` in `SDK/` when they are included in the downloaded package.
 
 Minimum packages:
 
@@ -52,10 +63,11 @@ Copy `SkeletonExample/src/config.json.example` to `SkeletonExample/src/config.js
 }
 ```
 
+Rerun the CMake configure step after editing the source config so it is copied to `SkeletonExample/src/bin/config.json`.
+
 ## Run
 
 ```bash
-cp SkeletonExample/src/config.json.example SkeletonExample/src/config.json
 cd SkeletonExample/src/bin
 ./SkeletonDemo
 ```
