@@ -1,11 +1,19 @@
 # Zoom Video SDK Linux Skeleton Demo
 
-`SkeletonExample` is the general-purpose starter sample in this repo. It can build in two modes:
+`SkeletonExample` is the general-purpose starter sample for joining a Video SDK session and handling participant events. It can build in two modes:
 
 - GUI mode when `gtkmm-3.0` and `SDL2` are available
 - console mode when those GUI dependencies are missing
 
 The output binary is `SkeletonDemo`.
+
+## What It Demonstrates
+
+- initializing the SDK and joining or leaving a session
+- handling participant, audio, video, and screen-share events
+- subscribing to local and remote video raw-data pipes
+- rendering video with GTK and SDL when GUI dependencies are available
+- running as a console-only SDK skeleton when GUI dependencies are unavailable
 
 ## Prerequisites
 
