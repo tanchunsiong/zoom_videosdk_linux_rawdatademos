@@ -19,7 +19,7 @@ This repository contains Linux Zoom Video SDK sample applications for:
 - `GetRawVideoAndAudioAPICallExample` -> `GetRawVideoAndAudioCallAPIDemo`: captures raw media and demonstrates sending recorded audio to the Deepgram API
 - `LanguageTranscriptionAndTranslationExample` -> `LanguageTranscriptionAndTranslationDemo`: starts live transcription and handles transcription callbacks; translation language selection is present but currently disabled
 - `LiveStreamingExample` -> `LiveStreamingDemo`: starts a custom RTMP live stream and handles streaming status callbacks
-- `SendRawVideoAndAudioExample` -> `SendRawVideoAndAudioDemo`: sends raw video, audio, and share data through virtual sources
+- `SendRawVideoAndAudioExample` -> `SendRawVideoAndAudioDemo`: sends raw video and generated PCM audio through virtual sources; it does not send raw share
 - `SkeletonExample` -> `SkeletonDemo`: provides a starter application with optional GTK/SDL video rendering and a console fallback
 - `StatisticsExample` -> `StatisticsDemo`: queries session audio, video, and share statistics
 
@@ -112,21 +112,29 @@ Each sample expects its own `src/config.json`. Start by copying that sample's `s
 {
     "session_name": "my-session",
     "token": "your-video-sdk-token",
-    "session_psw": ""
+    "session_psw": "",
+    "getSignatureFromWebService": false,
+    "signatureUrl": ""
 }
 ```
 
 Create or update `config.json` before configuring the sample. CMake copies it into `src/bin/`; if no local config exists, it copies `config.json.example` as the runtime `config.json` instead.
 
-If a sample has `getSignatureFromWebService` enabled, add a repo-level `.env` file:
+For direct-token mode, leave `getSignatureFromWebService` set to `false` and put the Video SDK JWT in `token`.
 
-```bash
-cat > .env <<'EOF'
-ZOOM_VIDEO_SDK_SIGNATURE_URL=https://your-token-service.example.com/video
-EOF
+For signature-service mode, configure:
+
+```json
+{
+    "session_name": "my-session",
+    "token": "",
+    "session_psw": "",
+    "getSignatureFromWebService": true,
+    "signatureUrl": "https://your-token-service.example.com/video"
+}
 ```
 
-Those samples first read `ZOOM_VIDEO_SDK_SIGNATURE_URL` from the process environment, then fall back to a `.env` file by walking upward from the current working directory. Set `getSignatureFromWebService` to `false` and rebuild when using only the token from `config.json`.
+Each executable reads `src/bin/config.json` when it starts. You can change `token`, `getSignatureFromWebService`, or `signatureUrl` in that runtime file and restart the executable without rebuilding. If you instead edit the source `src/config.json`, rerun the CMake configure step to copy it into `src/bin/`.
 
 ## Run
 

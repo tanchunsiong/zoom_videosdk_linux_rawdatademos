@@ -3,37 +3,41 @@
 #include "zoom_video_sdk_def.h"
 #include "helpers/zoom_video_sdk_video_source_helper_interface.h"
 
-using namespace ZOOMVIDEOSDK;
+#include <atomic>
+#include <string>
+#include <thread>
 
-//needed for audio, applies to this entire .h file
+using namespace ZOOMVIDEOSDK;
 
 class ZoomVideoSDKVideoSource :
   public IZoomVideoSDKVideoSource 
 {
-public: 
+public:
+    ZoomVideoSDKVideoSource();
+    ~ZoomVideoSDKVideoSource() override;
 
-	IZoomVideoSDKVideoSender* video_sender_;
-	int width_;
-	int height_;
+    void onInitialize(
+        IZoomVideoSDKVideoSender* sender,
+        IVideoSDKVector<VideoSourceCapability>* support_cap_list,
+        VideoSourceCapability& suggest_cap) override;
+    void onPropertyChange(
+        IVideoSDKVector<VideoSourceCapability>* support_cap_list,
+        VideoSourceCapability suggest_cap) override;
+    void onStartSend() override;
+    void onStopSend() override;
+    void onUninitialized() override;
 
- 
+private:
+    void SendVideoLoop();
+    void UpdateCapability(const VideoSourceCapability& capability);
 
-	virtual	void onInitialize(IZoomVideoSDKVideoSender* sender, IVideoSDKVector<VideoSourceCapability >* support_cap_list, VideoSourceCapability& suggest_cap) ;
-
-	
-	virtual void onPropertyChange(IVideoSDKVector<VideoSourceCapability >* support_cap_list, VideoSourceCapability suggest_cap) ;
-	
-	virtual void onStartSend();
-	virtual void onStopSend() ;
-	
-	virtual void onUninitialized();
-
-	virtual void sendVideoToVideoSource(IZoomVideoSDKVideoSender* video_sender, std::string video_source, int width, int height);
-
-	
-
-
+    IZoomVideoSDKVideoSender* video_sender_;
+    std::atomic<int> width_;
+    std::atomic<int> height_;
+    std::atomic<int> frame_rate_;
+    std::atomic<bool> sending_;
+    std::thread send_thread_;
+    std::string video_source_;
 };
-
 
 

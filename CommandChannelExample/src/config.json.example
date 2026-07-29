@@ -1,5 +1,7 @@
 {
     "session_name": "my-session",
     "token": "your-video-sdk-token",
-    "session_psw": ""
+    "session_psw": "",
+    "getSignatureFromWebService": false,
+    "signatureUrl": ""
 }

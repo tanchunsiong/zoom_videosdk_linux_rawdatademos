@@ -24,7 +24,6 @@
 #include "zoom_video_sdk_session_info_interface.h"
 
 #include "WebService.h"
-#include "DotEnv.h"
 
 using Json = nlohmann::json;
 USING_ZOOM_VIDEO_SDK_NAMESPACE
@@ -34,8 +33,6 @@ GMainLoop* loop;
 //these are controls to demonstrate the flow
 
 bool enableLTT = true; //bug
-
-bool getSignatureFromWebService = true;
 
 std::string getSelfDirPath()
 {
@@ -409,14 +406,14 @@ int main(int argc, char* argv[])
 	t.seekg(0);
 	t.read(&buffer[0], size);
 
-	std::string session_name, session_psw, session_token;
+	std::string session_name, session_psw, session_token, signature_url;
+	bool get_signature_from_web_service = false;
 	do
 	{
 		Json config_json;
 		try
 		{
 			config_json = Json::parse(buffer);
-			printf("config all_content: %s\n", buffer.c_str());
 		}
 		catch (Json::parse_error& ex)
 		{
@@ -431,36 +428,47 @@ int main(int argc, char* argv[])
 		Json json_name = config_json["session_name"];
 		Json json_psw = config_json["session_psw"];
 		Json json_token = config_json["token"];
+		Json json_get_signature = config_json["getSignatureFromWebService"];
+		Json json_signature_url = config_json["signatureUrl"];
 		if (!json_name.is_null())
 		{
 			session_name = json_name.get<std::string>();
-			printf("config session_name: %s\n", session_name.c_str());
 		}
 		if (!json_psw.is_null())
 		{
 			session_psw = json_psw.get<std::string>();
-			printf("config session_psw: %s\n", session_psw.c_str());
 		}
 		if (!json_token.is_null())
 		{
 			session_token = json_token.get<std::string>();
-			printf("config session_token: %s\n", session_token.c_str());
+		}
+		if (!json_get_signature.is_null())
+		{
+			get_signature_from_web_service = json_get_signature.get<bool>();
+		}
+		if (!json_signature_url.is_null())
+		{
+			signature_url = json_signature_url.get<std::string>();
 		}
 	} while (false);
 
-	if (session_name.size() == 0 || session_token.size() == 0)
+	if (session_name.empty())
 	{
-		return 0;
+		fprintf(stderr, "session_name is required in config.json.\n");
+		return 1;
 	}
 
-	if (getSignatureFromWebService) {
-		const std::string signature_url = sample_env::FindEnvValue("ZOOM_VIDEO_SDK_SIGNATURE_URL");
+	if (get_signature_from_web_service) {
 		if (signature_url.empty()) {
-			fprintf(stderr, "ZOOM_VIDEO_SDK_SIGNATURE_URL is not set. Define it in .env or the process environment.\n");
+			fprintf(stderr, "signatureUrl is required when getSignatureFromWebService is true.\n");
 			return 1;
 		}
 		session_token = GetSignatureFromWebService(signature_url, session_name, "1");
-	
+	}
+
+	if (session_token.empty()) {
+		fprintf(stderr, "token is required in config.json or must be returned by signatureUrl.\n");
+		return 1;
 	}
 
 	printf("begin to join: %s\n", self_dir.c_str());

@@ -67,11 +67,16 @@ Copy `SkeletonExample/src/config.json.example` to `SkeletonExample/src/config.js
 {
     "session_name": "my-session",
     "session_psw": "",
-    "token": "your-video-sdk-token"
+    "token": "your-video-sdk-token",
+    "getSignatureFromWebService": false,
+    "signatureUrl": ""
 }
 ```
 
 Rerun the CMake configure step after editing the source config so it is copied to `SkeletonExample/src/bin/config.json`.
+Alternatively, edit `SkeletonExample/src/bin/config.json` and restart the executable; runtime configuration changes do not require rebuilding.
+
+Set `getSignatureFromWebService` to `true` and provide `signatureUrl` to fetch a token from a custom signature service. When it is `false`, the sample uses `token` directly.
 
 ## Run
 

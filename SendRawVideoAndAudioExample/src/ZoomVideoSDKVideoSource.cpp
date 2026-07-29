@@ -1,104 +1,133 @@
 #include "ZoomVideoSDKVideoSource.h"
-#include "helpers/zoom_video_sdk_user_helper_interface.h"
 
+#include <algorithm>
+#include <chrono>
+#include <iostream>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
 
-
-using namespace cv;
-using namespace std;
-
 using namespace ZOOMVIDEOSDK;
 
-int video_play_flag = -1;
+ZoomVideoSDKVideoSource::ZoomVideoSDKVideoSource()
+    : video_sender_(nullptr),
+      width_(640),
+      height_(360),
+      frame_rate_(30),
+      sending_(false),
+      video_source_("Big_Buck_Bunny_720_10s_1MB.mp4")
+{
+}
 
+ZoomVideoSDKVideoSource::~ZoomVideoSDKVideoSource()
+{
+    onStopSend();
+}
 
+void ZoomVideoSDKVideoSource::onInitialize(
+    IZoomVideoSDKVideoSender* sender,
+    IVideoSDKVector<VideoSourceCapability>* support_cap_list,
+    VideoSourceCapability& suggest_cap)
+{
+    video_sender_ = sender;
+    UpdateCapability(suggest_cap);
+    std::cout << "Video source initialized at "
+              << width_ << "x" << height_ << " @ " << frame_rate_ << " FPS" << std::endl;
+}
 
-	void ZoomVideoSDKVideoSource::onInitialize(IZoomVideoSDKVideoSender* sender, IVideoSDKVector<VideoSourceCapability >* support_cap_list, VideoSourceCapability& suggest_cap) {
+void ZoomVideoSDKVideoSource::onPropertyChange(
+    IVideoSDKVector<VideoSourceCapability>* support_cap_list,
+    VideoSourceCapability suggest_cap)
+{
+    UpdateCapability(suggest_cap);
+    std::cout << "Video source changed to "
+              << width_ << "x" << height_ << " @ " << frame_rate_ << " FPS" << std::endl;
+}
 
-          this->video_sender_=sender;
-		  width_ = suggest_cap.width;
-		  height_ = suggest_cap.height;
-     }
+void ZoomVideoSDKVideoSource::onStartSend()
+{
+    if (!video_sender_)
+    {
+        std::cerr << "Cannot start raw video: SDK video sender is unavailable." << std::endl;
+        return;
+    }
+    if (sending_.exchange(true))
+    {
+        return;
+    }
 
-	
-	 void ZoomVideoSDKVideoSource::onPropertyChange(IVideoSDKVector<VideoSourceCapability >* support_cap_list, VideoSourceCapability suggest_cap) {}
-	
-	 void ZoomVideoSDKVideoSource::onStartSend() {
+    std::cout << "Starting raw video worker" << std::endl;
+    send_thread_ = std::thread(&ZoomVideoSDKVideoSource::SendVideoLoop, this);
+}
 
-		 printf("ZoomVideoSDKVideoSource::onStartSend() fired \n");
+void ZoomVideoSDKVideoSource::onStopSend()
+{
+    sending_ = false;
+    if (send_thread_.joinable())
+    {
+        send_thread_.join();
+    }
+}
 
+void ZoomVideoSDKVideoSource::onUninitialized()
+{
+    onStopSend();
+    video_sender_ = nullptr;
+}
 
-		 // ******************* Use OpenCV to send video *******************************
-		 video_play_flag = 1;
-		 sendVideoToVideoSource(video_sender_, "Big_Buck_Bunny_1080_10s_1MB.mp4", width_, height_);
-	 }
-  
-	
-	 void ZoomVideoSDKVideoSource::onStopSend()  {
-		 video_play_flag = -1;
-	 }
-	
-	 void ZoomVideoSDKVideoSource::onUninitialized() {}
+void ZoomVideoSDKVideoSource::UpdateCapability(const VideoSourceCapability& capability)
+{
+    int width = capability.width > 0 ? static_cast<int>(capability.width) : 640;
+    int height = capability.height > 0 ? static_cast<int>(capability.height) : 360;
+    width_ = width - (width % 2);
+    height_ = height - (height % 2);
+    frame_rate_ = capability.frame > 0 ? static_cast<int>(capability.frame) : 30;
+}
 
-	 void ZoomVideoSDKVideoSource::sendVideoToVideoSource(IZoomVideoSDKVideoSender* video_sender, std::string video_source, int width, int height)
-	 {
+void ZoomVideoSDKVideoSource::SendVideoLoop()
+{
+    cv::VideoCapture capture(video_source_);
+    if (!capture.isOpened())
+    {
+        std::cerr << "Unable to open video source: " << video_source_ << std::endl;
+        sending_ = false;
+        return;
+    }
 
-		 char* frameBuffer;
-		 int frameLen = height / 2 * 3 * width;
-		 frameBuffer = (char*)malloc(frameLen);
+    std::chrono::steady_clock::time_point next_frame = std::chrono::steady_clock::now();
+    bool first_frame_sent = false;
+    while (sending_)
+    {
+        cv::Mat frame;
+        if (!capture.read(frame) || frame.empty())
+        {
+            capture.set(cv::CAP_PROP_POS_FRAMES, 0);
+            continue;
+        }
 
-		 // execute in a thread.
-		 while (video_play_flag > 0 && video_sender)
-		 {
-			 Mat frame;
-			 VideoCapture cap;
-			 cap.open(video_source);
-			 if (!cap.isOpened())
-			 {
-				 cerr << "ERROR! Unable to open camera\n";
-				 video_play_flag = 0;
-				 break;
-			 }
-			 else
-			 {
-				 //--- GRAB AND WRITE LOOP
-				 cout << "Start grabbing" << endl;
-				 while (video_play_flag > 0)
-				 {
-					 // wait for a new frame from camera and store it into 'frame'
-					 cap.read(frame);
-					 // check if we succeeded
-					 if (frame.empty())
-					 {
-						 cerr << "ERROR! blank frame grabbed\n";
-						 break;
-					 }
-					 Mat resizedFrame;
-					 resize(frame, resizedFrame, Size(width, height), 0, 0, INTER_LINEAR);
+        const int width = width_;
+        const int height = height_;
+        const int frame_rate = std::max(1, frame_rate_.load());
+        cv::Mat resized_frame;
+        cv::resize(frame, resized_frame, cv::Size(width, height), 0, 0, cv::INTER_LINEAR);
 
-					 // covert Mat to YUV buffer
-					 Mat yuv;
-					 cv::cvtColor(resizedFrame, yuv, COLOR_BGRA2YUV_I420);
-					 char* p;
-					 for (int i = 0; i < height / 2 * 3; ++i)
-					 {
-						 p = yuv.ptr<char>(i);
-						 for (int j = 0; j < width; ++j)
-						 {
-							 frameBuffer[i * width + j] = p[j];
-						 }
-					 }
-					 video_sender->sendVideoFrame(frameBuffer, width, height, frameLen, 0);
-				 }
-				 cap.release();
-			 }
-		 }
-		 video_play_flag = -1; // stop video play when video_sender is null.
-	 }
+        cv::Mat i420_frame;
+        cv::cvtColor(resized_frame, i420_frame, cv::COLOR_BGR2YUV_I420);
+        const int frame_length = width * height * 3 / 2;
+        video_sender_->sendVideoFrame(
+            reinterpret_cast<char*>(i420_frame.data),
+            width,
+            height,
+            frame_length,
+            0,
+            FrameDataFormat_I420_LIMITED);
+        if (!first_frame_sent)
+        {
+            std::cout << "Sending I420 raw video frames" << std::endl;
+            first_frame_sent = true;
+        }
 
-
+        next_frame += std::chrono::milliseconds(1000 / frame_rate);
+        std::this_thread::sleep_until(next_frame);
+    }
+}

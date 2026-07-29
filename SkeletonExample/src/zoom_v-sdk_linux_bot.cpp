@@ -160,12 +160,57 @@ GMainLoop* loop;
 
 //these are controls to demonstrate the flow
 bool enableChat = true;
-bool getSignatureFromWebService = true;
 
 // Global variables
 bool g_in_session = false;
 bool g_audio_muted = false;  // Start with audio unmuted
 bool g_video_muted = false;
+
+static bool ResolveSessionToken(Json& config_json, const std::string& session_name, std::string& session_token)
+{
+    bool get_signature_from_web_service = false;
+    std::string signature_url;
+    Json json_get_signature = config_json["getSignatureFromWebService"];
+    Json json_signature_url = config_json["signatureUrl"];
+
+    if (!json_get_signature.is_null())
+    {
+        if (!json_get_signature.is_boolean())
+        {
+            fprintf(stderr, "getSignatureFromWebService must be a boolean.\n");
+            return false;
+        }
+        get_signature_from_web_service = json_get_signature.get<bool>();
+    }
+
+    if (!json_signature_url.is_null())
+    {
+        if (!json_signature_url.is_string())
+        {
+            fprintf(stderr, "signatureUrl must be a string.\n");
+            return false;
+        }
+        signature_url = json_signature_url.get<std::string>();
+    }
+
+    if (get_signature_from_web_service)
+    {
+        if (signature_url.empty())
+        {
+            fprintf(stderr, "signatureUrl is required when getSignatureFromWebService is true.\n");
+            return false;
+        }
+        session_token = GetSignatureFromWebService(signature_url, session_name, "1");
+    }
+
+    if (session_token.empty())
+    {
+        fprintf(stderr, "token is required in config.json or must be returned by signatureUrl.\n");
+        return false;
+    }
+
+    return true;
+}
 
 #if BUILD_GUI
 // Global UI variables (GUI only)
@@ -1701,13 +1746,20 @@ int main(int argc, char* argv[])
                 Json json_name = config_json["session_name"];
                 Json json_psw = config_json["session_psw"];
                 Json json_token = config_json["token"];
-                
+                std::string session_name;
+                std::string session_token;
+
                 if (!json_name.is_null())
-                    session_name_entry.set_text(json_name.get<std::string>());
+                {
+                    session_name = json_name.get<std::string>();
+                    session_name_entry.set_text(session_name);
+                }
                 if (!json_psw.is_null())
                     session_password_entry.set_text(json_psw.get<std::string>());
                 if (!json_token.is_null())
-                    signature_entry.set_text(json_token.get<std::string>());
+                    session_token = json_token.get<std::string>();
+                if (ResolveSessionToken(config_json, session_name, session_token))
+                    signature_entry.set_text(session_token);
             }
         }
         catch (Json::parse_error& ex)
@@ -1824,6 +1876,8 @@ int main(int argc, char* argv[])
                     session_psw = json_psw.get<std::string>();
                 if (!json_token.is_null())
                     session_token = json_token.get<std::string>();
+                if (!ResolveSessionToken(config_json, session_name, session_token))
+                    return 1;
             }
         }
         catch (Json::parse_error& ex)

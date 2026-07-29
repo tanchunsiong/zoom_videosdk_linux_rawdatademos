@@ -14,6 +14,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 find_package(PkgConfig REQUIRED)
+find_package(Threads REQUIRED)
 pkg_check_modules(deps REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavfilter libavformat libavcodec libavutil libswscale libswresample)
@@ -38,7 +39,6 @@ add_definitions(${GLIB_CFLAGS_OTHER} ${GIO_CFLAGS_OTHER} ${FFMPEG_CFLAGS_OTHER})
 
 add_executable(${TARGET_NAME}
     ${CMAKE_CURRENT_SOURCE_DIR}/ZoomVideoSDKVirtualAudioMic.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/ZoomVideoSDKShareSource.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ZoomVideoSDKVideoSource.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/zoom_v-sdk_linux_bot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/WebService.cpp
@@ -48,6 +48,7 @@ target_link_libraries(${TARGET_NAME}
     PRIVATE
         PkgConfig::deps
         PkgConfig::FFMPEG
+        Threads::Threads
         videosdk
         curl
         ${GLIB_LIBRARIES}

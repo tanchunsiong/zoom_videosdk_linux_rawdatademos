@@ -14,6 +14,8 @@ function(zoom_video_sdk_use)
     include_directories(${ZOOM_VIDEO_SDK_COMMON_DIR})
     include_directories(${ZOOM_VIDEO_SDK_ROOT}/h)
     link_directories(${ZOOM_VIDEO_SDK_ROOT})
+    set(CMAKE_BUILD_RPATH "$ORIGIN" PARENT_SCOPE)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN" PARENT_SCOPE)
 endfunction()
 
 function(zoom_video_sdk_stage_runtime runtime_dir)

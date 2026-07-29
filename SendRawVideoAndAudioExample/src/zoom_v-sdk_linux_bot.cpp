@@ -22,17 +22,12 @@
 #include "ZoomVideoSDKVirtualAudioMic.h"
 #include "helpers/zoom_video_sdk_audio_send_rawdata_interface.h"
 
-//needed for share screen
-#include "ZoomVideoSDKShareSource.h"
-#include "helpers/zoom_video_sdk_share_helper_interface.h"
-
 //needed for get raw video
 #include "ZoomVideoSDKVideoSource.h"
 #include "helpers/zoom_video_sdk_video_helper_interface.h"
 
 
 #include "WebService.h"
-#include "DotEnv.h"
 
 using Json = nlohmann::json;
 USING_ZOOM_VIDEO_SDK_NAMESPACE
@@ -43,10 +38,7 @@ GMainLoop* loop;
 
 bool sendRawVideo = true;
 bool sendRawAudio = true;
-bool sendRawShare = true;
 
-
-bool getSignatureFromWebService = true;
 
 std::string getSelfDirPath()
 {
@@ -72,7 +64,13 @@ public:
 	{
 		printf("Joined session successfully\n");
 
-
+		if (sendRawVideo) {
+			IZoomVideoSDKVideoHelper* video_helper = video_sdk_obj->getVideoHelper();
+			if (video_helper) {
+				ZoomVideoSDKErrors video_error = video_helper->startVideo();
+				printf("startVideo status: %d\n", video_error);
+			}
+		}
 
 		if (sendRawAudio) {
 			//needed for audio
@@ -88,26 +86,6 @@ public:
 		}
 
 
-
-
-		if (sendRawShare) {
-
-			//needed for share source
-			//this needs to be done after joing session
-			ZoomVideoSDKShareSource* virtual_share_source = new ZoomVideoSDKShareSource();
-			ZoomVideoSDKErrors err2 = video_sdk_obj->getShareHelper()->startSharingExternalSource(virtual_share_source);
-
-			if (err2 == ZoomVideoSDKErrors_Success) {
-			}
-			else {
-				printf("Error setting external source %d\n", err2);
-			}
-		};
-
-	
-
-
-	
 
 
 	}
@@ -376,11 +354,6 @@ void joinVideoSDKSession(std::string& session_name, std::string& session_psw, st
 		ZoomVideoSDKVideoSource* virtual_video_source = new ZoomVideoSDKVideoSource();
 		session_context.externalVideoSource = virtual_video_source;
 	}
-	if (sendRawShare) {
-		//nothing much to do before joining session
-	}
-
-
 	if (sendRawAudio) {
 		session_context.audioOption.connect = true; //needed for sending raw audio data
 		session_context.audioOption.mute = false; //needed for sending raw audio data
@@ -408,17 +381,17 @@ void my_handler(int s)
 {
 	printf("\nCaught signal %d\n", s);
 	
-	printf("\Leaving Session\n");
+	printf("Leaving Session\n");
 	video_sdk_obj->leaveSession(false);
-	printf("\Left Session\n");
+	printf("Left Session\n");
 	
-	printf("\Cleaning up SDK\n");
+	printf("Cleaning up SDK\n");
 	video_sdk_obj->cleanup();
-	printf("\Cleaned up SDK\n");
+	printf("Cleaned up SDK\n");
 
-	printf("\Destroying SDK Object\n");
+	printf("Destroying SDK Object\n");
 	DestroyZoomVideoSDKObj();
-	printf("\Destroyed SDK Object\n");
+	printf("Destroyed SDK Object\n");
 
 
 
@@ -437,14 +410,14 @@ int main(int argc, char* argv[])
 	t.seekg(0);
 	t.read(&buffer[0], size);
 
-	std::string session_name, session_psw, session_token;
+	std::string session_name, session_psw, session_token, signature_url;
+	bool get_signature_from_web_service = false;
 	do
 	{
 		Json config_json;
 		try
 		{
 			config_json = Json::parse(buffer);
-			printf("config all_content: %s\n", buffer.c_str());
 		}
 		catch (Json::parse_error& ex)
 		{
@@ -459,36 +432,47 @@ int main(int argc, char* argv[])
 		Json json_name = config_json["session_name"];
 		Json json_psw = config_json["session_psw"];
 		Json json_token = config_json["token"];
+		Json json_get_signature = config_json["getSignatureFromWebService"];
+		Json json_signature_url = config_json["signatureUrl"];
 		if (!json_name.is_null())
 		{
 			session_name = json_name.get<std::string>();
-			printf("config session_name: %s\n", session_name.c_str());
 		}
 		if (!json_psw.is_null())
 		{
 			session_psw = json_psw.get<std::string>();
-			printf("config session_psw: %s\n", session_psw.c_str());
 		}
 		if (!json_token.is_null())
 		{
 			session_token = json_token.get<std::string>();
-			printf("config session_token: %s\n", session_token.c_str());
+		}
+		if (!json_get_signature.is_null())
+		{
+			get_signature_from_web_service = json_get_signature.get<bool>();
+		}
+		if (!json_signature_url.is_null())
+		{
+			signature_url = json_signature_url.get<std::string>();
 		}
 	} while (false);
 
-	if (session_name.size() == 0 || session_token.size() == 0)
+	if (session_name.empty())
 	{
-		return 0;
+		fprintf(stderr, "session_name is required in config.json.\n");
+		return 1;
 	}
 
-	if (getSignatureFromWebService) {
-		const std::string signature_url = sample_env::FindEnvValue("ZOOM_VIDEO_SDK_SIGNATURE_URL");
+	if (get_signature_from_web_service) {
 		if (signature_url.empty()) {
-			fprintf(stderr, "ZOOM_VIDEO_SDK_SIGNATURE_URL is not set. Define it in .env or the process environment.\n");
+			fprintf(stderr, "signatureUrl is required when getSignatureFromWebService is true.\n");
 			return 1;
 		}
 		session_token = GetSignatureFromWebService(signature_url, session_name, "1");
-	
+	}
+
+	if (session_token.empty()) {
+		fprintf(stderr, "token is required in config.json or must be returned by signatureUrl.\n");
+		return 1;
 	}
 
 	printf("begin to join: %s\n", self_dir.c_str());
