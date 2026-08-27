@@ -1,0 +1,12 @@
+{
+    "session_name": "my-session",
+    "token": "your-video-sdk-token",
+    "session_psw": "",
+    "user_name": "Annotation Demo",
+    "getSignatureFromWebService": false,
+    "signatureUrl": "",
+    "monitorId": "",
+    "toolColor": 255,
+    "toolWidth": 3,
+    "disableViewerAnnotation": false
+}

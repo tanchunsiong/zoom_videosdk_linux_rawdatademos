@@ -4,6 +4,8 @@ This repository contains Linux Zoom Video SDK sample applications for:
 
 - raw audio and video receive
 - raw audio and video send
+- screen sharing, raw share sending, and annotation
+- file transfer through session chat
 - chat and command channel features
 - callout, cloud recording, live streaming, and statistics
 - a skeleton sample with optional GUI support
@@ -11,14 +13,18 @@ This repository contains Linux Zoom Video SDK sample applications for:
 ## Sample List
 
 - `AllInOneExample` -> `VideoSDKSessionRecorder`: combines raw-data receive/send and optional chat, command channel, streaming, recording, callout, transcription, and statistics controls
+- `AnnotationExample` -> `AnnotationDemo`: starts a display share and demonstrates annotation helper lifecycle, permissions, and tool configuration
 - `CalloutExample` -> `CalloutDemo`: demonstrates inviting a participant by phone
 - `ChatExample` -> `ChatDemo`: sends chat messages and handles chat callbacks
 - `CloudRecordingExample` -> `CloudRecordingDemo`: starts cloud recording and handles recording status callbacks
 - `CommandChannelExample` -> `CommandChannelDemo`: connects to the command channel and sends and receives commands
+- `FileTransferExample` -> `FileTransferDemo`: sends files to session participants and safely receives incoming files
 - `GetRawVideoAndAudioExample` -> `GetRawVideoAndAudioDemo`: subscribes to raw audio, video, and share data and writes received media to files
 - `GetRawVideoAndAudioAPICallExample` -> `GetRawVideoAndAudioCallAPIDemo`: captures raw media and demonstrates sending recorded audio to the Deepgram API
 - `LanguageTranscriptionAndTranslationExample` -> `LanguageTranscriptionAndTranslationDemo`: starts live transcription and handles transcription callbacks; translation language selection is present but currently disabled
 - `LiveStreamingExample` -> `LiveStreamingDemo`: starts a custom RTMP live stream and handles streaming status callbacks
+- `ScreenShareExample` -> `ScreenShareDemo`: shares a Linux display or X11 window and demonstrates pause, resume, stop, and share-status callbacks
+- `SendRawShareExample` -> `SendRawShareDemo`: sends generated, animated I420 frames as shared content
 - `SendRawVideoAndAudioExample` -> `SendRawVideoAndAudioDemo`: sends raw video and generated PCM audio through virtual sources; it does not send raw share
 - `SkeletonExample` -> `SkeletonDemo`: provides a starter application with optional GTK/SDL video rendering and a console fallback
 - `StatisticsExample` -> `StatisticsDemo`: queries session audio, video, and share statistics
@@ -72,6 +78,7 @@ Extra packages for some samples:
 
 - raw-data samples: FFmpeg development packages
 - `SendRawVideoAndAudioExample`: OpenCV
+- `ScreenShareExample` and `AnnotationExample`: an X11 display or equivalent virtual display at runtime
 - `SkeletonExample` GUI mode: `gtkmm-3.0` and `SDL2`
 
 Example:

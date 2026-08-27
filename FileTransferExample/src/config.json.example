@@ -1,0 +1,11 @@
+{
+    "session_name": "my-session",
+    "token": "your-video-sdk-token",
+    "session_psw": "",
+    "user_name": "File Transfer Demo",
+    "getSignatureFromWebService": false,
+    "signatureUrl": "",
+    "filePath": "",
+    "downloadDirectory": "downloads",
+    "autoAcceptIncomingFiles": true
+}

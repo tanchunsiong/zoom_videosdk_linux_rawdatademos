@@ -1,0 +1,11 @@
+{
+    "session_name": "my-session",
+    "token": "your-video-sdk-token",
+    "session_psw": "",
+    "user_name": "Raw Share Demo",
+    "getSignatureFromWebService": false,
+    "signatureUrl": "",
+    "width": 1280,
+    "height": 720,
+    "frameRate": 25
+}

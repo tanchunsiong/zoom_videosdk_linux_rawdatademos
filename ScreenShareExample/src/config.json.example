@@ -1,0 +1,15 @@
+{
+    "session_name": "my-session",
+    "token": "your-video-sdk-token",
+    "session_psw": "",
+    "user_name": "Screen Share Demo",
+    "getSignatureFromWebService": false,
+    "signatureUrl": "",
+    "monitorId": "",
+    "windowHandle": "",
+    "shareDeviceAudio": false,
+    "optimizeForVideo": false,
+    "pauseAfterSeconds": 0,
+    "resumeAfterSeconds": 0,
+    "stopAfterSeconds": 0
+}

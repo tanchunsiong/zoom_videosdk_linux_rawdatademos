@@ -4,12 +4,12 @@
 
 ## What It Demonstrates
 
-- retrieving send and receive audio statistics
-- retrieving send and receive video statistics
-- retrieving send and receive screen-share statistics
+- calling the SDK APIs for send and receive audio statistics
+- calling the SDK APIs for send and receive video statistics
+- calling the SDK APIs for send and receive screen-share statistics
 - accessing frequency, resolution, frame rate, latency, jitter, and packet-loss fields
 
-The sample queries the statistics immediately after joining. Extend `src/zoom_v-sdk_linux_bot.cpp` with logging or periodic polling if the values need to be observed over time.
+The sample queries the statistics immediately after joining but does not currently print the returned values. Extend `src/zoom_v-sdk_linux_bot.cpp` with logging or periodic polling if the metrics need to be observed over time.
 
 ## Build And Run
 
