@@ -1,81 +1,36 @@
-# Use the official Ubuntu image as the base image
-FROM ubuntu:22.04
+# Build from the repository root; extract the Linux Video SDK into SDK/ first.
+FROM ubuntu:24.04
 
-# Install necessary dependencies
-RUN apt-get update && \
-    apt-get install -y build-essential cmake
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        build-essential cmake pkg-config ca-certificates \
+        libglib2.0-dev libcurl4-openssl-dev \
+        libx11-xcb1 libxcb-xfixes0 libxcb-shape0 libxcb-shm0 \
+        libxcb-randr0 libxcb-image0 libxcb-keysyms1 libxcb-xtest0 \
+        libxcb-xkb1 libxkbcommon-x11-0 libgbm1 libxtst6 libgl1 \
+        libegl1 libnss3 libasound2t64 libpulse0 pulseaudio pulseaudio-utils dbus \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get install -y pkgconf
+# StatisticsDemo links these FFmpeg libraries directly in its CMake target.
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        libswscale-dev libavfilter-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get install -y gtkmm-3.0
-
-
-
-RUN apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
-    libx11-xcb1 \
-    libxcb-xfixes0 \
-    libxcb-shape0 \
-    libxcb-shm0 \
-    libxcb-randr0 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-xtest0 
-
-# these are copied from msdk, not sure if needed
-
-# RUN apt-get update && apt-get install -y --no-install-recommends --no-install-suggests \
-    #libdbus-1-3 \
-    #libglib2.0-0 \
-    #libgbm1 \
-    #libxfixes3 \
-    #libgl1 \
-    #libdrm2 \
-    #libgssapi-krb5-2 \
-    #openssl \
-    #ca-certificates \
-    #pkg-config \
-    #libegl-mesa0 \
-    #libsdl2-dev \
-    #g++-multilib 
-
-    # these are needed to start join the session, need to test it out
- RUN apt-get install -y libglib2.0-dev \
-    liblzma-dev \
-    libxcb-xkb1 \
-    libgbm1 \
-    libxtst6 \
-    libgl1 \
-    libnss3 \ 
-    libasound2\ 
-    libpulse0
-
-RUN apt-get install -y pulseaudio
-
-RUN apt-get install -y libcurl4-openssl-dev
-
-# Set the working directory
 WORKDIR /app
+COPY SDK/ SDK/
+COPY cmake/ cmake/
+COPY common/ common/
+COPY StatisticsExample/src/ StatisticsExample/src/
 
-# Copy your application files to the container
+RUN cmake -S StatisticsExample/src -B build \
+    && cmake --build build --parallel 2 --target StatisticsDemo \
+    && useradd --create-home --uid 10001 demo \
+    && chown -R demo:demo /app
 
-COPY / /app/
+USER demo
+ENV HOME=/home/demo
+ENV LD_LIBRARY_PATH=/app/StatisticsExample/src/bin:/app/StatisticsExample/src/bin/qt_libs/Qt/lib
+WORKDIR /app/StatisticsExample/src/bin
 
-# Execute additional commands
-RUN rm -rf bin && rm -rf build  && cmake -B build && cd build && make
-
-# Set the working directory to the binary folder
-WORKDIR /app/bin
-
-
-# Define a shell script to run multiple commands
-RUN echo '#!/bin/bash' > /app/bin/run.sh \
-    && echo '/app/src/setup-pulseaudio.sh' >> /app/bin/run.sh \
-    && echo './StatisticsExample' >> /app/bin/run.sh
-
-# Make the run script executable
-RUN chmod +x /app/bin/run.sh
-
-# Run the meetingSDKDemo binary when the container starts
-CMD ["/app/bin/run.sh"]
-#CMD ["/bin/bash"]
-#CMD ["./StatisticsExample"]
+# Run PulseAudio as the same unprivileged user as the SDK, with virtual audio devices.
+ENTRYPOINT ["/bin/sh", "-ec", "pulseaudio --start --exit-idle-time=-1; pactl load-module module-null-sink sink_name=SpeakerOutput >/dev/null; pactl set-default-sink SpeakerOutput; pactl set-default-source SpeakerOutput.monitor; exec \"$@\"", "--"]
+CMD ["./StatisticsDemo"]

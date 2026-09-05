@@ -1,0 +1,16 @@
+.git
+**/.env
+**/.env.*
+**/config.json
+**/*.backup
+**/*.pem
+**/*.key
+**/build
+**/bin
+**/out
+**/CMakeFiles
+**/CMakeCache.txt
+**/.vscode
+**/.vs
+**/lib/ffmpeg
+**/lib/zoom_video_sdk
