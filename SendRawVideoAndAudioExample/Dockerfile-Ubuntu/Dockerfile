@@ -19,7 +19,7 @@ COPY cmake/ cmake/
 COPY common/ common/
 COPY SendRawVideoAndAudioExample/src/ SendRawVideoAndAudioExample/src/
 
-RUN cmake -S SendRawVideoAndAudioExample/src -B build \
+RUN cmake -S SendRawVideoAndAudioExample/src -B build -DZOOM_VIDEO_SDK_STAGE_SYMLINKS=OFF \
     && cmake --build build --parallel 2 --target SendRawVideoAndAudioDemo \
     && useradd --create-home --uid 10001 demo \
     && chown -R demo:demo /app

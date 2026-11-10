@@ -17,7 +17,7 @@ COPY cmake/ cmake/
 COPY common/ common/
 COPY SkeletonExample/src/ SkeletonExample/src/
 
-RUN cmake -S SkeletonExample/src -B build \
+RUN cmake -S SkeletonExample/src -B build -DZOOM_VIDEO_SDK_STAGE_SYMLINKS=OFF \
     && cmake --build build --parallel 2 --target SkeletonDemo \
     && useradd --create-home --uid 10001 demo \
     && chown -R demo:demo /app

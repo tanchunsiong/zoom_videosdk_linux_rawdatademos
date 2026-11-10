@@ -16,7 +16,7 @@ COPY cmake/ cmake/
 COPY common/ common/
 COPY LanguageTranscriptionAndTranslationExample/src/ LanguageTranscriptionAndTranslationExample/src/
 
-RUN cmake -S LanguageTranscriptionAndTranslationExample/src -B build \
+RUN cmake -S LanguageTranscriptionAndTranslationExample/src -B build -DZOOM_VIDEO_SDK_STAGE_SYMLINKS=OFF \
     && cmake --build build --parallel 2 --target LanguageTranscriptionAndTranslationDemo \
     && useradd --create-home --uid 10001 demo \
     && chown -R demo:demo /app

@@ -33,7 +33,8 @@ CMakeSettings.json
 **/lib/zoom_video_sdk/libvideosdk.so
 **/lib/zoom_video_sdk/libvideosdk.so.1
 
-SDK/
+SDK/*
+!SDK/.gitkeep
 .env/
 .env
 .env.local

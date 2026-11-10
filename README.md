@@ -33,17 +33,18 @@ Each sample builds from its own `src/` directory and writes its executable to `s
 
 ## Fresh Clone Notes
 
-A fresh clone does not contain every local SDK artifact needed for every sample build.
+A fresh clone does not contain the Zoom Video SDK. Download it from [Zoom Marketplace](https://marketplace.zoom.us) and extract it locally; do not commit SDK files.
 
 Tracked in git:
 
 - sample source code
 - sample `config.json.example` templates
-- legacy `ffmpeg.tar.gz` archives in the sample `src/lib/` directories
+- symlinks in each sample `src/lib/` directory to `SDK/ffmpeg.tar.gz` and `SDK/qt_libs.tar.gz`
 
 The Zoom Video SDK itself is now expected from a shared extracted SDK root:
 
 - default path: `SDK/` at the repository root
+- place `ffmpeg.tar.gz` and `qt_libs.tar.gz` beside the extracted SDK when a sample needs the bundled legacy artifacts
 - override with `-DZOOM_VIDEO_SDK_ROOT=/path/to/SDK`
 
 The raw-data recording samples build against system FFmpeg development packages via `pkg-config`.
@@ -110,6 +111,11 @@ If the SDK was extracted somewhere else:
 ```bash
 cmake -S . -B build -DZOOM_VIDEO_SDK_ROOT=/path/to/SDK
 ```
+
+By default, CMake stages `libvideosdk.so`, `libcml.so`, `libmpg123.so`, and
+`qt_libs` into the executable directory with symlinks to reduce duplicate disk
+usage. Pass `-DZOOM_VIDEO_SDK_STAGE_SYMLINKS=OFF` when copying is required, for
+example inside Docker images or archives that will not preserve the source tree.
 
 ## Configure
 

@@ -1,6 +1,7 @@
 get_filename_component(ZOOM_VIDEO_SDK_DEFAULT_ROOT "${CMAKE_CURRENT_LIST_DIR}/../SDK" ABSOLUTE)
 get_filename_component(ZOOM_VIDEO_SDK_COMMON_DIR "${CMAKE_CURRENT_LIST_DIR}/../common" ABSOLUTE)
 set(ZOOM_VIDEO_SDK_ROOT "${ZOOM_VIDEO_SDK_DEFAULT_ROOT}" CACHE PATH "Path to the extracted Zoom Video SDK")
+option(ZOOM_VIDEO_SDK_STAGE_SYMLINKS "Stage runtime dependencies with symlinks instead of copies" ON)
 
 if(NOT EXISTS "${ZOOM_VIDEO_SDK_ROOT}/h/zoom_video_sdk_api.h")
     message(FATAL_ERROR "Zoom Video SDK headers not found under ${ZOOM_VIDEO_SDK_ROOT}. Extract the Linux Video SDK into SDK/ at the repo root or set ZOOM_VIDEO_SDK_ROOT.")
@@ -19,23 +20,40 @@ function(zoom_video_sdk_use)
 endfunction()
 
 function(zoom_video_sdk_stage_runtime runtime_dir)
-    file(COPY ${ZOOM_VIDEO_SDK_ROOT}/libcml.so DESTINATION ${runtime_dir})
-    file(COPY ${ZOOM_VIDEO_SDK_ROOT}/libmpg123.so DESTINATION ${runtime_dir})
-    file(COPY ${ZOOM_VIDEO_SDK_ROOT}/libvideosdk.so DESTINATION ${runtime_dir})
+    if(ZOOM_VIDEO_SDK_STAGE_SYMLINKS)
+        foreach(_sdk_library IN ITEMS libcml.so libmpg123.so libvideosdk.so)
+            file(REMOVE "${runtime_dir}/${_sdk_library}")
+            file(CREATE_LINK "${ZOOM_VIDEO_SDK_ROOT}/${_sdk_library}" "${runtime_dir}/${_sdk_library}" SYMBOLIC)
+        endforeach()
+    else()
+        foreach(_sdk_library IN ITEMS libcml.so libmpg123.so libvideosdk.so)
+            file(REMOVE "${runtime_dir}/${_sdk_library}")
+        endforeach()
+        file(COPY ${ZOOM_VIDEO_SDK_ROOT}/libcml.so DESTINATION ${runtime_dir})
+        file(COPY ${ZOOM_VIDEO_SDK_ROOT}/libmpg123.so DESTINATION ${runtime_dir})
+        file(COPY ${ZOOM_VIDEO_SDK_ROOT}/libvideosdk.so DESTINATION ${runtime_dir})
+    endif()
 
     if(EXISTS "${ZOOM_VIDEO_SDK_ROOT}/qt_libs")
-        file(COPY ${ZOOM_VIDEO_SDK_ROOT}/qt_libs DESTINATION ${runtime_dir})
+        file(REMOVE_RECURSE "${runtime_dir}/qt_libs")
+        if(ZOOM_VIDEO_SDK_STAGE_SYMLINKS)
+            file(CREATE_LINK "${ZOOM_VIDEO_SDK_ROOT}/qt_libs" "${runtime_dir}/qt_libs" SYMBOLIC)
+        else()
+            file(COPY ${ZOOM_VIDEO_SDK_ROOT}/qt_libs DESTINATION ${runtime_dir})
+        endif()
     endif()
 
     if(EXISTS "${ZOOM_VIDEO_SDK_ROOT}/cpthost")
-        file(COPY ${ZOOM_VIDEO_SDK_ROOT}/cpthost DESTINATION ${runtime_dir})
+        file(REMOVE_RECURSE "${runtime_dir}/cpthost")
+        if(ZOOM_VIDEO_SDK_STAGE_SYMLINKS)
+            file(CREATE_LINK "${ZOOM_VIDEO_SDK_ROOT}/cpthost" "${runtime_dir}/cpthost" SYMBOLIC)
+        else()
+            file(COPY ${ZOOM_VIDEO_SDK_ROOT}/cpthost DESTINATION ${runtime_dir})
+        endif()
     endif()
 
-    execute_process(
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${ZOOM_VIDEO_SDK_ROOT}/libvideosdk.so
-        ${runtime_dir}/libvideosdk.so.1
-    )
+    file(REMOVE "${runtime_dir}/libvideosdk.so.1")
+    file(CREATE_LINK "libvideosdk.so" "${runtime_dir}/libvideosdk.so.1" SYMBOLIC)
 endfunction()
 
 function(zoom_video_sdk_stage_config source_dir runtime_dir)

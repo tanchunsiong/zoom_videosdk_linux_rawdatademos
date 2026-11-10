@@ -16,7 +16,7 @@ COPY cmake/ cmake/
 COPY common/ common/
 COPY CloudRecordingExample/src/ CloudRecordingExample/src/
 
-RUN cmake -S CloudRecordingExample/src -B build \
+RUN cmake -S CloudRecordingExample/src -B build -DZOOM_VIDEO_SDK_STAGE_SYMLINKS=OFF \
     && cmake --build build --parallel 2 --target CloudRecordingDemo \
     && useradd --create-home --uid 10001 demo \
     && chown -R demo:demo /app

@@ -21,7 +21,7 @@ COPY cmake/ cmake/
 COPY common/ common/
 COPY StatisticsExample/src/ StatisticsExample/src/
 
-RUN cmake -S StatisticsExample/src -B build \
+RUN cmake -S StatisticsExample/src -B build -DZOOM_VIDEO_SDK_STAGE_SYMLINKS=OFF \
     && cmake --build build --parallel 2 --target StatisticsDemo \
     && useradd --create-home --uid 10001 demo \
     && chown -R demo:demo /app
