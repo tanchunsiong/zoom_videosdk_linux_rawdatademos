@@ -179,6 +179,16 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_start(const char *userName, const ch
 {
 	int ret = 0;
 
+	if (!pkt)
+	{
+		pkt = av_packet_alloc();
+	}
+	if (!pkt)
+	{
+		printf("Failed to allocate packet\n");
+		return -1;
+	}
+
 	// timestamp
 	start_time = steady_clock::now();
 
@@ -204,13 +214,9 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_start(const char *userName, const ch
 	sprintf(fn_out, "../%s", outFileName);
 
 	// ffmpeg init
-	// init filters
-	avfilter_register_all();
-
 	ffmpeg_filter_init();
 
 	// init encoder
-	av_register_all();
 	pFormatCtx = avformat_alloc_context();
 
 	// Method1: Guess Format
@@ -235,8 +241,7 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_start(const char *userName, const ch
 	{
 		return -1;
 	}
-	// Param that must set
-	pCodecCtx = video_st->codec;
+	pCodecCtx = avcodec_alloc_context3(NULL);
 	// pCodecCtx->codec_id =AV_CODEC_ID_HEVC;
 	pCodecCtx->codec_id = fmt->video_codec;
 	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -282,6 +287,14 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_start(const char *userName, const ch
 		return -1;
 	}
 
+	ret = avcodec_parameters_from_context(video_st->codecpar, pCodecCtx);
+	if (ret < 0)
+	{
+		printf("Failed to copy encoder parameters, code: %d, ", ret);
+		err_msg(ret);
+		return ret;
+	}
+
 	// Write File Header
 	if ((ret = avformat_write_header(pFormatCtx, NULL)) < 0)
 	{
@@ -299,8 +312,6 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_filter_init()
 	buffersink = avfilter_get_by_name("buffersink");
 	outputs = avfilter_inout_alloc();
 	inputs = avfilter_inout_alloc();
-	buffersink_params = av_buffersink_params_alloc();
-
 	filter_graph = avfilter_graph_alloc();
 	///* buffer video source: the decoded frames from the decoder will be inserted here. */
 	char args[512];
@@ -316,8 +327,7 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_filter_init()
 	}
 
 	/* buffer video sink: to terminate the filter chain. */
-	buffersink_params->pixel_fmts = pix_fmts;
-	if ((ret = avfilter_graph_create_filter(&buffersink_ctx, buffersink, "out", NULL, buffersink_params, filter_graph)) < 0)
+	if ((ret = avfilter_graph_create_filter(&buffersink_ctx, buffersink, "out", NULL, NULL, filter_graph)) < 0)
 	{
 		printf("Cannot create buffer sink, code: %d, ", ret);
 		err_msg(ret);
@@ -413,22 +423,32 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_encode()
 	// frame_out->pts = ((tstruct.time - start_tstruct.time) * 1000 + (tstruct.millitm - start_tstruct.millitm)) * 10;
 	frame_out->pts = duration_cast<std::chrono::milliseconds>(current_time - start_time).count() * (video_st->time_base.den) / (video_st->time_base.num * 1000);
 
-	av_init_packet(&pkt);
-
-	int got_picture = 0;
-	if ((ret = avcodec_encode_video2(pCodecCtx, &pkt, frame_out, &got_picture)) < 0)
+	ret = avcodec_send_frame(pCodecCtx, frame_out);
+	if (ret < 0)
 	{
 		printf("Failed to encode, code: %d, ", ret);
 		err_msg(ret);
 		return -1;
 	}
-	if (got_picture == 1)
+
+	ret = avcodec_receive_packet(pCodecCtx, pkt);
+	if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
 	{
-		printf("Succeed to encode frame: %5d\tsize:%5d\n", framecnt, pkt.size);
+		ret = 0;
+	}
+	else if (ret < 0)
+	{
+		printf("Failed to receive encoded packet, code: %d, ", ret);
+		err_msg(ret);
+		return -1;
+	}
+	else
+	{
+		printf("Succeed to encode frame: %5d\tsize:%5d\n", framecnt, pkt->size);
 		framecnt++;
-		pkt.stream_index = video_st->index;
-		av_write_frame(pFormatCtx, &pkt);
-		av_packet_unref(&pkt);
+		pkt->stream_index = video_st->index;
+		av_write_frame(pFormatCtx, pkt);
+		av_packet_unref(pkt);
 	}
 
 	av_frame_unref(frame_out);
@@ -451,11 +471,8 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_stop()
 	av_write_trailer(pFormatCtx);
 
 	// Clean
-	if (video_st)
-	{
-		avcodec_close(video_st->codec);
-		av_free(frame_out);
-	}
+	avcodec_free_context(&pCodecCtx);
+	av_free(frame_out);
 	avio_close(pFormatCtx->pb);
 	avformat_free_context(pFormatCtx);
 
@@ -464,39 +481,39 @@ int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_stop()
 		fclose(fp_yuv);
 	}
 
-	av_free(buffersink_params);
-
 	av_frame_free(&frame_in);
 	avfilter_graph_free(&filter_graph);
+	av_packet_free(&pkt);
+	pkt = NULL;
 	return 0;
 }
 
 int ZoomVideoSDKRawDataPipeDelegate::ffmpeg_flush(AVFormatContext *fmt_ctx, unsigned int stream_index)
 {
 	int ret;
-	int got_frame;
-	AVPacket enc_pkt;
-	if (!(fmt_ctx->streams[stream_index]->codec->codec->capabilities &
-		  AV_CODEC_CAP_DELAY))
+	AVStream *stream = fmt_ctx->streams[stream_index];
+	(void)stream;
+	if (!(pCodec->capabilities & AV_CODEC_CAP_DELAY))
 		return 0;
-	while (1)
+
+	ret = avcodec_send_frame(pCodecCtx, NULL);
+	if (ret < 0 && ret != AVERROR_EOF)
+		return ret;
+
+	while (ret >= 0)
 	{
-		enc_pkt.data = NULL;
-		enc_pkt.size = 0;
-		av_init_packet(&enc_pkt);
-		ret = avcodec_encode_video2(fmt_ctx->streams[stream_index]->codec, &enc_pkt,
-									NULL, &got_frame);
-		av_frame_free(NULL);
-		if (ret < 0)
-			break;
-		if (!got_frame)
+		ret = avcodec_receive_packet(pCodecCtx, pkt);
+		if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
 		{
 			ret = 0;
 			break;
 		}
-		printf("Flush Encoder: Succeed to encode 1 frame!\tsize:%5d\n", enc_pkt.size);
+		if (ret < 0)
+			break;
+		printf("Flush Encoder: Succeed to encode 1 frame!\tsize:%5d\n", pkt->size);
 		/* mux encoded frame */
-		ret = av_write_frame(fmt_ctx, &enc_pkt);
+		ret = av_write_frame(fmt_ctx, pkt);
+		av_packet_unref(pkt);
 		if (ret < 0)
 			break;
 	}

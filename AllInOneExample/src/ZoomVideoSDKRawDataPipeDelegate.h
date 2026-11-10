@@ -62,19 +62,17 @@ class ZoomVideoSDKRawDataPipeDelegate :
 	const AVFilter* buffersink;
 	AVFilterInOut* outputs;
 	AVFilterInOut* inputs;
-	AVBufferSinkParams* buffersink_params;
-
 	//Output YUV
 	FILE* fp_yuv;
 	int isOutputYUV = 0;
 
 	// ffmpeg encoding
 	AVFormatContext* pFormatCtx;
-	AVOutputFormat* fmt;
+	const AVOutputFormat* fmt;
 	AVStream* video_st;
 	AVCodecContext* pCodecCtx;
-	AVCodec* pCodec;
-	AVPacket pkt;
+	const AVCodec* pCodec;
+	AVPacket* pkt = NULL;
 	//uint8_t* picture_buf;
 	AVFrame* pFrame;
 	int picture_size;
